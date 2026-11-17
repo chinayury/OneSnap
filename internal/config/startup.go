@@ -54,10 +54,13 @@ func enableStartup() error {
 		return fmt.Errorf("failed to resolve path: %w", err)
 	}
 
-	// Open registry key for writing and reading (for verification)
-	key, err := registry.OpenKey(registry.CURRENT_USER, startupKeyPath, registry.SET_VALUE|registry.QUERY_VALUE)
+	// Create (or open) the Run key for writing and reading (for verification).
+	// CreateKey instead of OpenKey because the Run key may be missing in
+	// minimal user hives (e.g. CI service sessions); OpenKey would fail
+	// with ERROR_FILE_NOT_FOUND there.
+	key, _, err := registry.CreateKey(registry.CURRENT_USER, startupKeyPath, registry.SET_VALUE|registry.QUERY_VALUE)
 	if err != nil {
-		return fmt.Errorf("failed to open registry: %w", err)
+		return fmt.Errorf("failed to create registry key: %w", err)
 	}
 	defer key.Close()
 
