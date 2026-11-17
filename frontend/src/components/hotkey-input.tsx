@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { Tooltip } from './tooltip';
+import { useT } from '../i18n';
 
 interface HotkeyInputProps {
   value: string;
@@ -41,13 +43,14 @@ const HOTKEY_PRESETS = [
 ] as const;
 
 export function HotkeyInput({ value, onChange, label, disabled = false }: HotkeyInputProps) {
+  const t = useT();
   const [isRecording, setIsRecording] = useState(false);
   const [currentKeys, setCurrentKeys] = useState<string[]>([]);
   const inputRef = useRef<HTMLButtonElement>(null);
 
   // Format hotkey for display
   const formatHotkey = (hotkey: string): string => {
-    if (!hotkey) return 'Click to set';
+    if (!hotkey) return t('hotkey.click');
     return hotkey;
   };
 
@@ -151,25 +154,26 @@ export function HotkeyInput({ value, onChange, label, disabled = false }: Hotkey
           {isRecording
             ? currentKeys.length > 0
               ? currentKeys.join('+')
-              : 'Press keys...'
+              : t('hotkey.press')
             : formatHotkey(value)}
         </button>
         {value && !isRecording && (
-          <button
-            onClick={clearHotkey}
-            disabled={disabled}
-            className="px-3 py-2.5 rounded-xl transition-all duration-200
-                       bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/30
-                       text-slate-400 hover:text-rose-400"
-            title="Clear hotkey"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <Tooltip text={t('tip.hotkey.clear')}>
+            <button
+              onClick={clearHotkey}
+              disabled={disabled}
+              className="px-3 py-2.5 rounded-xl transition-all duration-200
+                         bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/30
+                         text-slate-400 hover:text-rose-400"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </Tooltip>
         )}
       </div>
       {/* Preset buttons for browser-blocked keys */}
       <div className="mt-2">
-        <span className="text-xs text-slate-500 mb-1.5 block">or select preset:</span>
+        <span className="text-xs text-slate-500 mb-1.5 block">{t('hotkey.preset')}</span>
         <div className="flex flex-wrap gap-1.5">
           {HOTKEY_PRESETS.map((preset) => (
             <button

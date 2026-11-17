@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from 'react';
 import { OutputRatio, BorderType } from '../types';
 import { GetBackgroundImages, SaveBackgroundImages } from '../../wailsjs/go/main/App';
 import { X, ImagePlus, Eye, EyeOff } from 'lucide-react';
+import { Tooltip } from './tooltip';
+import { useT, MsgKey } from '../i18n';
 
 const MAX_BACKGROUND_IMAGES = 8;
 const MAX_BG_IMAGE_SIZE = 2048;  // Max dimension
@@ -91,37 +93,37 @@ interface SettingsPanelProps {
   onBorderTypeChange: (value: BorderType) => void;
 }
 
-const GRADIENT_PRESETS = [
+const GRADIENT_PRESETS: { name: string; key?: MsgKey; value: string }[] = [
   // Row 1: Vibrant & Bold
-  { name: 'Sunset', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-  { name: 'Ocean', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-  { name: 'Forest', value: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' },
-  { name: 'Fire', value: 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)' },
+  { name: 'Sunset', key: 'gradient.Sunset', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+  { name: 'Ocean', key: 'gradient.Ocean', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  { name: 'Forest', key: 'gradient.Forest', value: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' },
+  { name: 'Fire', key: 'gradient.Fire', value: 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)' },
   // Row 2: Cool & Calm
-  { name: 'Cool Blue', value: 'linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%)' },
-  { name: 'Lavender', value: 'linear-gradient(135deg, #c471f5 0%, #fa71cd 100%)' },
-  { name: 'Aqua', value: 'linear-gradient(135deg, #13547a 0%, #80d0c7 100%)' },
-  { name: 'Grape', value: 'linear-gradient(135deg, #5f2c82 0%, #49a09d 100%)' },
+  { name: 'Cool Blue', key: 'gradient.Cool Blue', value: 'linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%)' },
+  { name: 'Lavender', key: 'gradient.Lavender', value: 'linear-gradient(135deg, #c471f5 0%, #fa71cd 100%)' },
+  { name: 'Aqua', key: 'gradient.Aqua', value: 'linear-gradient(135deg, #13547a 0%, #80d0c7 100%)' },
+  { name: 'Grape', key: 'gradient.Grape', value: 'linear-gradient(135deg, #5f2c82 0%, #49a09d 100%)' },
   // Row 3: Soft & Pastel
-  { name: 'Peach', value: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' },
-  { name: 'Sky', value: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
-  { name: 'Warm', value: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
-  { name: 'Mint', value: 'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)' },
+  { name: 'Peach', key: 'gradient.Peach', value: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' },
+  { name: 'Sky', key: 'gradient.Sky', value: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+  { name: 'Warm', key: 'gradient.Warm', value: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
+  { name: 'Mint', key: 'gradient.Mint', value: 'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)' },
   // Row 4: Dark & Moody
-  { name: 'Midnight', value: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' },
-  { name: 'Carbon', value: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' },
-  { name: 'Deep Space', value: 'linear-gradient(135deg, #000428 0%, #004e92 100%)' },
-  { name: 'Noir', value: 'linear-gradient(135deg, #232526 0%, #414345 100%)' },
+  { name: 'Midnight', key: 'gradient.Midnight', value: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' },
+  { name: 'Carbon', key: 'gradient.Carbon', value: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' },
+  { name: 'Deep Space', key: 'gradient.Deep Space', value: 'linear-gradient(135deg, #000428 0%, #004e92 100%)' },
+  { name: 'Noir', key: 'gradient.Noir', value: 'linear-gradient(135deg, #232526 0%, #414345 100%)' },
   // Row 5: Premium & Elegant
-  { name: 'Royal', value: 'linear-gradient(135deg, #141e30 0%, #243b55 100%)' },
-  { name: 'Rose Gold', value: 'linear-gradient(135deg, #f4c4f3 0%, #fc67fa 100%)' },
-  { name: 'Emerald', value: 'linear-gradient(135deg, #1d976c 0%, #93f9b9 100%)' },
-  { name: 'Amethyst', value: 'linear-gradient(135deg, #9d50bb 0%, #6e48aa 100%)' },
+  { name: 'Royal', key: 'gradient.Royal', value: 'linear-gradient(135deg, #141e30 0%, #243b55 100%)' },
+  { name: 'Rose Gold', key: 'gradient.Rose Gold', value: 'linear-gradient(135deg, #f4c4f3 0%, #fc67fa 100%)' },
+  { name: 'Emerald', key: 'gradient.Emerald', value: 'linear-gradient(135deg, #1d976c 0%, #93f9b9 100%)' },
+  { name: 'Amethyst', key: 'gradient.Amethyst', value: 'linear-gradient(135deg, #9d50bb 0%, #6e48aa 100%)' },
   // Row 6: Modern & Trendy
-  { name: 'Neon', value: 'linear-gradient(135deg, #00f260 0%, #0575e6 100%)' },
-  { name: 'Aurora', value: 'linear-gradient(135deg, #00c6fb 0%, #005bea 100%)' },
-  { name: 'Candy', value: 'linear-gradient(135deg, #ff6a88 0%, #ff99ac 100%)' },
-  { name: 'Clean', value: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' },
+  { name: 'Neon', key: 'gradient.Neon', value: 'linear-gradient(135deg, #00f260 0%, #0575e6 100%)' },
+  { name: 'Aurora', key: 'gradient.Aurora', value: 'linear-gradient(135deg, #00c6fb 0%, #005bea 100%)' },
+  { name: 'Candy', key: 'gradient.Candy', value: 'linear-gradient(135deg, #ff6a88 0%, #ff99ac 100%)' },
+  { name: 'Clean', key: 'gradient.Clean', value: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' },
 ];
 
 export function SettingsPanel({
@@ -157,6 +159,7 @@ export function SettingsPanel({
   onBorderOpacityChange,
   onBorderTypeChange,
 }: SettingsPanelProps) {
+  const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
@@ -245,14 +248,20 @@ export function SettingsPanel({
     onBackgroundChange(`url(${imageUrl})`);
   };
 
+  const borderTypeLabels: Record<BorderType, MsgKey> = {
+    outside: 'panel.border.outside',
+    center: 'panel.border.center',
+    inside: 'panel.border.inside',
+  };
+
   return (
     <div className="w-72 glass p-4 overflow-y-auto border-l-0">
-      <h2 className="text-sm font-bold text-gradient mb-5">Settings</h2>
+      <h2 className="text-sm font-bold text-gradient mb-5">{t('panel.title')}</h2>
 
       {/* Padding */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
-          <label className="text-sm text-slate-300 font-medium">Padding</label>
+          <label className="text-sm text-slate-300 font-medium">{t('panel.padding')}</label>
           <span className="text-xs text-violet-400 font-semibold bg-violet-500/10 px-2 py-0.5 rounded-full">{padding}px</span>
         </div>
         <input
@@ -268,7 +277,7 @@ export function SettingsPanel({
       {/* Inset */}
       <div className={`mb-6 transition-opacity duration-200 ${!showBackground ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex justify-between items-center mb-2">
-          <label className="text-sm text-slate-300 font-medium">Inset</label>
+          <label className="text-sm text-slate-300 font-medium">{t('panel.inset')}</label>
           <span className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">{inset}%</span>
         </div>
         <input
@@ -285,7 +294,7 @@ export function SettingsPanel({
       {inset > 0 && showBackground && (
         <div className="mb-6">
           <label className="block text-sm text-slate-300 font-medium mb-2">
-            Inset Color
+            {t('panel.inset.color')}
           </label>
           <div className="flex items-center gap-3">
             <input
@@ -295,7 +304,7 @@ export function SettingsPanel({
               className="w-10 h-10 rounded-lg cursor-pointer bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
             />
             <div className="text-xs">
-              <div className="text-slate-400">Background Color</div>
+              <div className="text-slate-400">{t('panel.bg.color')}</div>
               <div className="text-slate-300 font-mono">{insetBackgroundColor || extractedColor || '#1a1a2e'}</div>
             </div>
           </div>
@@ -305,7 +314,7 @@ export function SettingsPanel({
       {/* Corner Radius */}
       <div className={`mb-6 transition-opacity duration-200 ${!showBackground ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex justify-between items-center mb-2">
-          <label className="text-sm text-slate-300 font-medium">Corner Radius</label>
+          <label className="text-sm text-slate-300 font-medium">{t('panel.corner.radius')}</label>
           <span className="text-xs text-cyan-400 font-semibold bg-cyan-500/10 px-2 py-0.5 rounded-full">{cornerRadius}px</span>
         </div>
         <input
@@ -321,18 +330,20 @@ export function SettingsPanel({
       {/* Border Section */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <label className="text-sm text-slate-300 font-medium">Border</label>
-          <button
-            onClick={() => onBorderEnabledChange(!borderEnabled)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200
-              ${borderEnabled
-                ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
-                : 'bg-slate-500/20 text-slate-400 hover:bg-slate-500/30'
-              }`}
-          >
-            {borderEnabled ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-            <span>{borderEnabled ? 'Enabled' : 'Disabled'}</span>
-          </button>
+          <label className="text-sm text-slate-300 font-medium">{t('panel.border')}</label>
+          <Tooltip text={t('panel.tip.border.toggle')}>
+            <button
+              onClick={() => onBorderEnabledChange(!borderEnabled)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200
+                ${borderEnabled
+                  ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+                  : 'bg-slate-500/20 text-slate-400 hover:bg-slate-500/30'
+                }`}
+            >
+              {borderEnabled ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+              <span>{borderEnabled ? t('panel.enabled') : t('panel.disabled')}</span>
+            </button>
+          </Tooltip>
         </div>
 
         {/* Border controls - disabled when border is off */}
@@ -340,7 +351,7 @@ export function SettingsPanel({
           {/* Weight */}
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-sm text-slate-300 font-medium">Weight</label>
+              <label className="text-sm text-slate-300 font-medium">{t('panel.weight')}</label>
               <span className="text-xs text-amber-400 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-full">{borderWeight}px</span>
             </div>
             <input
@@ -362,7 +373,7 @@ export function SettingsPanel({
               className="w-10 h-10 rounded-lg cursor-pointer bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
             />
             <div className="text-xs">
-              <div className="text-slate-400">Color</div>
+              <div className="text-slate-400">{t('panel.color')}</div>
               <div className="text-slate-300 font-mono">{borderColor}</div>
             </div>
           </div>
@@ -370,7 +381,7 @@ export function SettingsPanel({
           {/* Opacity */}
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-sm text-slate-300 font-medium">Opacity</label>
+              <label className="text-sm text-slate-300 font-medium">{t('panel.opacity')}</label>
               <span className="text-xs text-blue-400 font-semibold bg-blue-500/10 px-2 py-0.5 rounded-full">{borderOpacity}%</span>
             </div>
             <input
@@ -385,19 +396,19 @@ export function SettingsPanel({
 
           {/* Type */}
           <div>
-            <label className="block text-sm text-slate-300 font-medium mb-2">Type</label>
+            <label className="block text-sm text-slate-300 font-medium mb-2">{t('panel.type')}</label>
             <div className="grid grid-cols-3 gap-1.5">
               {(['outside', 'center', 'inside'] as BorderType[]).map((type) => (
                 <button
                   key={type}
                   onClick={() => onBorderTypeChange(type)}
-                  className={`px-2 py-1.5 text-xs rounded-lg transition-all duration-200 font-medium capitalize
+                  className={`px-2 py-1.5 text-xs rounded-lg transition-all duration-200 font-medium
                     ${borderType === type
                       ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
                       : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5'
                     }`}
                 >
-                  {type}
+                  {t(borderTypeLabels[type])}
                 </button>
               ))}
             </div>
@@ -408,7 +419,7 @@ export function SettingsPanel({
       {/* Shadow/Blur */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
-          <label className="text-sm text-slate-300 font-medium">Shadow Blur</label>
+          <label className="text-sm text-slate-300 font-medium">{t('panel.shadow.blur')}</label>
           <span className="text-xs text-pink-400 font-semibold bg-pink-500/10 px-2 py-0.5 rounded-full">{shadowSize}px</span>
         </div>
         <input
@@ -424,7 +435,7 @@ export function SettingsPanel({
       {/* Output Ratio */}
       <div className={`mb-6 transition-opacity duration-200 ${!showBackground ? 'opacity-50 pointer-events-none' : ''}`}>
         <label className="block text-sm text-slate-300 font-medium mb-3">
-          Output Ratio
+          {t('panel.output.ratio')}
         </label>
         <div className="grid grid-cols-3 gap-1.5">
           {OUTPUT_RATIO_PRESETS.map((preset) => (
@@ -446,28 +457,29 @@ export function SettingsPanel({
       {/* Background Toggle */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-slate-300 font-medium">Background</label>
-          <button
-            onClick={() => onShowBackgroundChange(!showBackground)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200
-              ${showBackground
-                ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
-                : 'bg-slate-500/20 text-slate-400 hover:bg-slate-500/30'
-              }`}
-            title={showBackground ? 'Hide background' : 'Show background'}
-          >
-            {showBackground ? (
-              <>
-                <Eye className="w-3.5 h-3.5" />
-                <span>Visible</span>
-              </>
-            ) : (
-              <>
-                <EyeOff className="w-3.5 h-3.5" />
-                <span>Hidden</span>
-              </>
-            )}
-          </button>
+          <label className="text-sm text-slate-300 font-medium">{t('panel.background')}</label>
+          <Tooltip text={showBackground ? t('panel.tip.bg.hide') : t('panel.tip.bg.show')}>
+            <button
+              onClick={() => onShowBackgroundChange(!showBackground)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200
+                ${showBackground
+                  ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+                  : 'bg-slate-500/20 text-slate-400 hover:bg-slate-500/30'
+                }`}
+            >
+              {showBackground ? (
+                <>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>{t('panel.visible')}</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span>{t('panel.hidden')}</span>
+                </>
+              )}
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -482,7 +494,7 @@ export function SettingsPanel({
                 : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5'
               }`}
           >
-            Auto
+            {t('panel.auto')}
           </button>
           <button
             onClick={() => onAutoBackgroundChange(false)}
@@ -492,7 +504,7 @@ export function SettingsPanel({
                 : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5'
               }`}
           >
-            Manual
+            {t('panel.manual')}
           </button>
         </div>
       </div>
@@ -503,10 +515,10 @@ export function SettingsPanel({
           <div
             className="w-8 h-8 rounded-lg border border-white/20 shadow-inner"
             style={{ backgroundColor: extractedColor }}
-            title={`Extracted color: ${extractedColor}`}
+            title={t('panel.extracted.tip', { color: extractedColor })}
           />
           <div className="text-xs">
-            <div className="text-slate-400">Extracted Color</div>
+            <div className="text-slate-400">{t('panel.extracted.color')}</div>
             <div className="text-slate-300 font-mono">{extractedColor}</div>
           </div>
         </div>
@@ -515,22 +527,22 @@ export function SettingsPanel({
       {/* Background Gradients */}
       <div className={`mb-6 transition-opacity duration-200 ${!showBackground || autoBackground ? 'opacity-50 pointer-events-none' : ''}`}>
         <label className="block text-sm text-slate-300 font-medium mb-3">
-          Gradient Presets
-          {autoBackground && <span className="ml-2 text-xs text-slate-500">(Auto mode)</span>}
+          {t('panel.gradient.presets')}
+          {autoBackground && <span className="ml-2 text-xs text-slate-500">{t('panel.auto.mode')}</span>}
         </label>
         <div className="grid grid-cols-4 gap-2">
           {GRADIENT_PRESETS.map((gradient) => (
-            <button
-              key={gradient.name}
-              onClick={() => onBackgroundChange(gradient.value)}
-              className={`w-full aspect-square rounded-lg transition-all duration-200
-                ${backgroundColor === gradient.value
-                  ? 'ring-2 ring-violet-400 ring-offset-2 ring-offset-slate-900 scale-105'
-                  : 'hover:scale-105 hover:ring-1 hover:ring-white/30'
-                }`}
-              style={{ background: gradient.value }}
-              title={gradient.name}
-            />
+            <Tooltip key={gradient.name} text={t('panel.tip.gradient', { name: gradient.key ? t(gradient.key) : gradient.name })}>
+              <button
+                onClick={() => onBackgroundChange(gradient.value)}
+                className={`w-full aspect-square rounded-lg transition-all duration-200
+                  ${backgroundColor === gradient.value
+                    ? 'ring-2 ring-violet-400 ring-offset-2 ring-offset-slate-900 scale-105'
+                    : 'hover:scale-105 hover:ring-1 hover:ring-white/30'
+                  }`}
+                style={{ background: gradient.value }}
+              />
+            </Tooltip>
           ))}
         </div>
       </div>
@@ -538,7 +550,7 @@ export function SettingsPanel({
       {/* Custom Color */}
       <div className={`mb-6 transition-opacity duration-200 ${!showBackground || autoBackground ? 'opacity-50 pointer-events-none' : ''}`}>
         <label className="block text-sm text-slate-300 font-medium mb-3">
-          Custom Color
+          {t('panel.custom.color')}
         </label>
         <div className="relative">
           <input
@@ -553,7 +565,7 @@ export function SettingsPanel({
       {/* Image Background */}
       <div className={`mb-6 transition-opacity duration-200 ${!showBackground || autoBackground ? 'opacity-50 pointer-events-none' : ''}`}>
         <label className="block text-sm text-slate-300 font-medium mb-3">
-          Image Background
+          {t('panel.image.bg')}
           <span className="ml-2 text-xs text-slate-500">({uploadedImages.length}/{MAX_BACKGROUND_IMAGES})</span>
         </label>
         <input
@@ -579,19 +591,20 @@ export function SettingsPanel({
                         : 'hover:scale-105 hover:ring-1 hover:ring-white/30'
                       }`}
                     style={{ backgroundImage: `url(${imageUrl})` }}
-                    title={`Image ${index + 1}`}
+                    title={t('panel.image.n', { n: index + 1 })}
                   />
                   {/* Remove button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveImage(index);
-                    }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg shadow-rose-500/50"
-                    title="Remove image"
-                  >
-                    <X className="w-2.5 h-2.5 text-white" />
-                  </button>
+                  <Tooltip text={t('panel.tip.remove.image')}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveImage(index);
+                      }}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg shadow-rose-500/50"
+                    >
+                      <X className="w-2.5 h-2.5 text-white" />
+                    </button>
+                  </Tooltip>
                 </div>
               );
             })}
@@ -600,15 +613,17 @@ export function SettingsPanel({
 
         {/* Upload button - only show if under limit */}
         {uploadedImages.length < MAX_BACKGROUND_IMAGES && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full px-4 py-2.5 rounded-xl transition-all duration-200
-                       bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 border-dashed
-                       text-slate-300 hover:text-white font-medium flex items-center justify-center gap-2"
-          >
-            <ImagePlus className="w-4 h-4" />
-            Upload Image
-          </button>
+          <Tooltip text={t('panel.tip.upload')}>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-4 py-2.5 rounded-xl transition-all duration-200
+                         bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 border-dashed
+                         text-slate-300 hover:text-white font-medium flex items-center justify-center gap-2"
+            >
+              <ImagePlus className="w-4 h-4" />
+              {t('panel.upload.image')}
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>

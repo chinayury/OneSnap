@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { EditorTool, Annotation } from '../types';
+import { Tooltip } from './tooltip';
+import { useT, MsgKey } from '../i18n';
 import {
   MousePointer2,
   Square,
@@ -65,14 +67,17 @@ function ColorPickerDropdown({
   value,
   onChange,
   allowNone,
-  noneLabel = 'None',
+  noneLabel,
+  tooltipText,
 }: {
   label: string;
   value: string | null;
   onChange: (color: string | null) => void;
   allowNone: boolean;
-  noneLabel?: string;
+  noneLabel: string;
+  tooltipText: string;
 }) {
+  const t = useT();
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -160,26 +165,27 @@ function ColorPickerDropdown({
 
   return (
     <div className="relative">
-      <button
-        ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
-        title={label}
-      >
-        <span className="text-xs text-slate-400 font-medium">{label}</span>
-        {value === null ? (
-          <div
-            className="w-5 h-5 rounded border border-white/20"
-            style={{ background: 'linear-gradient(135deg, transparent 45%, #ef4444 45%, #ef4444 55%, transparent 55%)' }}
-          />
-        ) : (
-          <div
-            className="w-5 h-5 rounded border border-white/20"
-            style={{ backgroundColor: value }}
-          />
-        )}
-        <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+      <Tooltip text={tooltipText}>
+        <button
+          ref={buttonRef}
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+        >
+          <span className="text-xs text-slate-400 font-medium">{label}</span>
+          {value === null ? (
+            <div
+              className="w-5 h-5 rounded border border-white/20"
+              style={{ background: 'linear-gradient(135deg, transparent 45%, #ef4444 45%, #ef4444 55%, transparent 55%)' }}
+            />
+          ) : (
+            <div
+              className="w-5 h-5 rounded border border-white/20"
+              style={{ backgroundColor: value }}
+            />
+          )}
+          <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </Tooltip>
 
       {isOpen && createPortal(dropdownContent, document.body)}
     </div>
@@ -210,6 +216,7 @@ export function AnnotationToolbar({
   onUndo,
   onRedo,
 }: AnnotationToolbarProps) {
+  const t = useT();
   // Show text controls when text tool is active or a text annotation is selected
   const showTextControls = activeTool === 'text' || selectedAnnotation?.type === 'text';
 
@@ -268,18 +275,18 @@ export function AnnotationToolbar({
   const isBoldActive = currentFontStyle === 'bold' || currentFontStyle === 'bold italic';
   const isItalicActive = currentFontStyle === 'italic' || currentFontStyle === 'bold italic';
 
-  const tools: { id: EditorTool; icon: JSX.Element; label: string; shortcut: string }[] = [
-    { id: 'select', label: 'Select', shortcut: 'V', icon: <MousePointer2 className="w-5 h-5" /> },
-    { id: 'rectangle', label: 'Rectangle', shortcut: 'R', icon: <Square className="w-5 h-5" /> },
-    { id: 'ellipse', label: 'Ellipse', shortcut: 'E', icon: <Circle className="w-5 h-5" /> },
-    { id: 'arrow', label: 'Arrow', shortcut: 'A', icon: <MoveRight className="w-5 h-5" /> },
-    { id: 'line', label: 'Line', shortcut: 'L', icon: <Minus className="w-5 h-5 -rotate-45" /> },
-    { id: 'text', label: 'Text', shortcut: 'T', icon: <Type className="w-5 h-5" /> },
-    { id: 'number', label: 'Number', shortcut: 'N', icon: <Hash className="w-5 h-5" /> },
-    { id: 'spotlight', label: 'Spotlight', shortcut: 'S', icon: <Lightbulb className="w-5 h-5" /> },
-    { id: 'mosaic', label: 'Mosaic', shortcut: 'M', icon: <LayoutGrid className="w-5 h-5" /> },
-    { id: 'blur', label: 'Blur', shortcut: 'B', icon: <Droplets className="w-5 h-5" /> },
-    { id: 'crop', label: 'Crop', shortcut: 'C', icon: <Crop className="w-5 h-5" /> },
+  const tools: { id: EditorTool; icon: JSX.Element; labelKey: MsgKey; tipKey: MsgKey; shortcut: string }[] = [
+    { id: 'select', labelKey: 'tool.select', tipKey: 'tip.tool.select', shortcut: 'V', icon: <MousePointer2 className="w-5 h-5" /> },
+    { id: 'rectangle', labelKey: 'tool.rectangle', tipKey: 'tip.tool.rectangle', shortcut: 'R', icon: <Square className="w-5 h-5" /> },
+    { id: 'ellipse', labelKey: 'tool.ellipse', tipKey: 'tip.tool.ellipse', shortcut: 'E', icon: <Circle className="w-5 h-5" /> },
+    { id: 'arrow', labelKey: 'tool.arrow', tipKey: 'tip.tool.arrow', shortcut: 'A', icon: <MoveRight className="w-5 h-5" /> },
+    { id: 'line', labelKey: 'tool.line', tipKey: 'tip.tool.line', shortcut: 'L', icon: <Minus className="w-5 h-5 -rotate-45" /> },
+    { id: 'text', labelKey: 'tool.text', tipKey: 'tip.tool.text', shortcut: 'T', icon: <Type className="w-5 h-5" /> },
+    { id: 'number', labelKey: 'tool.number', tipKey: 'tip.tool.number', shortcut: 'N', icon: <Hash className="w-5 h-5" /> },
+    { id: 'spotlight', labelKey: 'tool.spotlight', tipKey: 'tip.tool.spotlight', shortcut: 'S', icon: <Lightbulb className="w-5 h-5" /> },
+    { id: 'mosaic', labelKey: 'tool.mosaic', tipKey: 'tip.tool.mosaic', shortcut: 'M', icon: <LayoutGrid className="w-5 h-5" /> },
+    { id: 'blur', labelKey: 'tool.blur', tipKey: 'tip.tool.blur', shortcut: 'B', icon: <Droplets className="w-5 h-5" /> },
+    { id: 'crop', labelKey: 'tool.crop', tipKey: 'tip.tool.crop', shortcut: 'C', icon: <Crop className="w-5 h-5" /> },
   ];
 
   // Mosaic/blur are borderless region effects - hide color/width controls
@@ -291,47 +298,49 @@ export function AnnotationToolbar({
       {/* Tools */}
       <div className="flex items-center gap-1 pr-2 border-r border-white/10">
         {tools.map((tool) => (
-          <button
-            key={tool.id}
-            onClick={() => onToolChange(tool.id)}
-            className={`p-2 rounded-lg transition-all duration-200 ${
-              activeTool === tool.id
-                ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-white/10'
-            }`}
-            title={`${tool.label} (${tool.shortcut})`}
-          >
-            {tool.icon}
-          </button>
+          <Tooltip key={tool.id} text={`${t(tool.tipKey)}`}>
+            <button
+              onClick={() => onToolChange(tool.id)}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                activeTool === tool.id
+                  ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {tool.icon}
+            </button>
+          </Tooltip>
         ))}
       </div>
 
       {/* Stroke Color Dropdown */}
       {!isEffectTool && (
         <ColorPickerDropdown
-          label="Stroke"
+          label={t('anno.stroke')}
           value={currentStrokeColor}
           onChange={onColorChange}
           allowNone={showFillControls}
-          noneLabel="No stroke"
+          noneLabel={t('anno.no.stroke')}
+          tooltipText={t('anno.stroke')}
         />
       )}
 
       {/* Fill Color Dropdown - only for rectangle/ellipse */}
       {showFillControls && !isEffectTool && (
         <ColorPickerDropdown
-          label="Fill"
+          label={t('anno.fill')}
           value={currentFillColor}
           onChange={onFillColorChange}
           allowNone={true}
-          noneLabel="No fill"
+          noneLabel={t('anno.no.fill')}
+          tooltipText={t('anno.fill')}
         />
       )}
 
       {/* Stroke Width - hide when text tool active or effect tool active */}
       {!showTextControls && !isEffectTool && (
         <div className="flex items-center gap-1 px-2 border-l border-white/10">
-          <span className="text-xs text-slate-400 font-medium mr-1">Width</span>
+          <span className="text-xs text-slate-400 font-medium mr-1">{t('anno.width')}</span>
           {STROKE_WIDTHS.map((width) => (
             <button
               key={width}
@@ -341,7 +350,7 @@ export function AnnotationToolbar({
                   ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
                   : 'text-slate-400 hover:text-white hover:bg-white/10'
               }`}
-              title={`${width}px`}
+              title={t('anno.px', { n: width })}
             >
               <div
                 className="rounded-full bg-current"
@@ -353,9 +362,9 @@ export function AnnotationToolbar({
       )}
 
       {/* Corner Radius - only for rectangle */}
-      {showRectangleControls && (
+      {showRectangleControls && !isEffectTool && (
         <div className="flex items-center gap-1 px-2 border-l border-white/10">
-          <span className="text-xs text-slate-400 font-medium mr-1">Radius</span>
+          <span className="text-xs text-slate-400 font-medium mr-1">{t('anno.radius')}</span>
           {CORNER_RADII.map((radius) => (
             <button
               key={radius}
@@ -365,7 +374,7 @@ export function AnnotationToolbar({
                   ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
                   : 'text-slate-400 hover:text-white hover:bg-white/10'
               }`}
-              title={radius === 0 ? 'Sharp corners' : `${radius}px radius`}
+              title={radius === 0 ? t('anno.none') : t('anno.px', { n: radius })}
             >
               <div
                 className="w-4 h-4 border-2 border-current"
@@ -379,7 +388,7 @@ export function AnnotationToolbar({
       {/* Text Controls - Font Size */}
       {showTextControls && (
         <div className="flex items-center gap-2 px-2 border-l border-white/10">
-          <span className="text-xs text-slate-400 font-medium">Size</span>
+          <span className="text-xs text-slate-400 font-medium">{t('anno.size')}</span>
           <select
             value={currentFontSize}
             onChange={(e) => onFontSizeChange(Number(e.target.value))}
@@ -387,7 +396,7 @@ export function AnnotationToolbar({
           >
             {FONT_SIZES.map((size) => (
               <option key={size} value={size} className="bg-slate-800">
-                {size}px
+                {t('anno.px', { n: size })}
               </option>
             ))}
           </select>
@@ -397,45 +406,48 @@ export function AnnotationToolbar({
       {/* Text Controls - Bold & Italic */}
       {showTextControls && (
         <div className="flex items-center gap-1">
-          <button
-            onClick={toggleBold}
-            className={`p-2 rounded-lg transition-all duration-200 ${
-              isBoldActive
-                ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-white/10'
-            }`}
-            title="Bold"
-          >
-            <Bold className="w-4 h-4" />
-          </button>
-          <button
-            onClick={toggleItalic}
-            className={`p-2 rounded-lg transition-all duration-200 ${
-              isItalicActive
-                ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-white/10'
-            }`}
-            title="Italic"
-          >
-            <Italic className="w-4 h-4" />
-          </button>
+          <Tooltip text={t('anno.bold')}>
+            <button
+              onClick={toggleBold}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                isBoldActive
+                  ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <Bold className="w-4 h-4" />
+            </button>
+          </Tooltip>
+          <Tooltip text={t('anno.italic')}>
+            <button
+              onClick={toggleItalic}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                isItalicActive
+                  ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
+                  : 'text-slate-400 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <Italic className="w-4 h-4" />
+            </button>
+          </Tooltip>
         </div>
       )}
 
       {/* Arrow Controls - Curved Toggle */}
       {showArrowControls && onCurvedChange && (
-        <button
-          onClick={() => onCurvedChange(!isArrowCurved)}
-          className={`p-2 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
-            isArrowCurved
-              ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
-              : 'text-slate-400 hover:text-white hover:bg-white/10'
-          }`}
-          title="Curved Arrow"
-        >
-          <Spline className="w-4 h-4" />
-          <span className="text-xs font-medium">Curve</span>
-        </button>
+        <Tooltip text={t('anno.curve')}>
+          <button
+            onClick={() => onCurvedChange(!isArrowCurved)}
+            className={`p-2 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+              isArrowCurved
+                ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
+                : 'text-slate-400 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Spline className="w-4 h-4" />
+            <span className="text-xs font-medium">{t('anno.curve')}</span>
+          </button>
+        </Tooltip>
       )}
 
       {/* Spacer */}
@@ -443,45 +455,48 @@ export function AnnotationToolbar({
 
       {/* Undo/Redo Buttons */}
       <div className="flex items-center gap-1 px-2 border-l border-white/10">
-        <button
-          onClick={onUndo}
-          disabled={!canUndo}
-          className={`p-2 rounded-lg transition-all duration-200 ${
-            canUndo
-              ? 'text-slate-400 hover:text-white hover:bg-white/10'
-              : 'text-slate-600 cursor-not-allowed opacity-50'
-          }`}
-          title="Undo (Ctrl+Z)"
-        >
-          <Undo2 className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onRedo}
-          disabled={!canRedo}
-          className={`p-2 rounded-lg transition-all duration-200 ${
-            canRedo
-              ? 'text-slate-400 hover:text-white hover:bg-white/10'
-              : 'text-slate-600 cursor-not-allowed opacity-50'
-          }`}
-          title="Redo (Ctrl+Shift+Z)"
-        >
-          <Redo2 className="w-5 h-5" />
-        </button>
+        <Tooltip text={t('anno.undo')}>
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={`p-2 rounded-lg transition-all duration-200 ${
+              canUndo
+                ? 'text-slate-400 hover:text-white hover:bg-white/10'
+                : 'text-slate-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <Undo2 className="w-5 h-5" />
+          </button>
+        </Tooltip>
+        <Tooltip text={t('anno.redo')}>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            className={`p-2 rounded-lg transition-all duration-200 ${
+              canRedo
+                ? 'text-slate-400 hover:text-white hover:bg-white/10'
+                : 'text-slate-600 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <Redo2 className="w-5 h-5" />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Delete Button */}
-      <button
-        onClick={onDeleteSelected}
-        disabled={!hasSelection}
-        className={`p-2 rounded-lg transition-all duration-200 ${
-          hasSelection
-            ? 'text-rose-400 hover:text-white hover:bg-gradient-to-r hover:from-rose-500 hover:to-pink-500 hover:shadow-lg hover:shadow-rose-500/30'
-            : 'text-slate-600 cursor-not-allowed opacity-50'
-        }`}
-        title="Delete Selected (Del)"
-      >
-        <Trash2 className="w-5 h-5" />
-      </button>
+      <Tooltip text={t('anno.delete')}>
+        <button
+          onClick={onDeleteSelected}
+          disabled={!hasSelection}
+          className={`p-2 rounded-lg transition-all duration-200 ${
+            hasSelection
+              ? 'text-rose-400 hover:text-white hover:bg-gradient-to-r hover:from-rose-500 hover:to-pink-500 hover:shadow-lg hover:shadow-rose-500/30'
+              : 'text-slate-600 cursor-not-allowed opacity-50'
+          }`}
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </Tooltip>
     </div>
   );
 }

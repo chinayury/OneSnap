@@ -7,13 +7,18 @@ import {
 } from '../../wailsjs/go/main/App';
 import { config } from '../../wailsjs/go/models';
 import { X } from 'lucide-react';
+import { useT, Lang, MsgKey } from '../i18n';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Current UI language (controlled by App) */
+  lang: Lang;
+  /** Called immediately when the user switches language in the General tab */
+  onLanguageChange: (lang: Lang) => void;
 }
 
-type SettingsTab = 'hotkeys' | 'startup' | 'quicksave' | 'export' | 'updates';
+type SettingsTab = 'general' | 'hotkeys' | 'startup' | 'quicksave' | 'export' | 'updates';
 
 // Local interface for easier state management
 interface LocalConfig {
@@ -70,8 +75,9 @@ const defaultConfig: LocalConfig = {
   },
 };
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('hotkeys');
+export function SettingsModal({ isOpen, onClose, lang, onLanguageChange }: SettingsModalProps) {
+  const t = useT();
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [localConfig, setLocalConfig] = useState<LocalConfig>(defaultConfig);
   const [originalConfig, setOriginalConfig] = useState<LocalConfig>(defaultConfig);
   const [isSaving, setIsSaving] = useState(false);
@@ -118,7 +124,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setError(null);
     } catch (err) {
       console.error('Failed to load config:', err);
-      setError('Failed to load settings');
+      setError(t('settings.error.load'));
     }
   };
 
@@ -140,7 +146,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       onClose();
     } catch (err) {
       console.error('Failed to save config:', err);
-      setError('Failed to save settings');
+      setError(t('settings.error.save'));
     }
 
     setIsSaving(false);
@@ -168,12 +174,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   if (!isOpen) return null;
 
-  const tabs: { id: SettingsTab; label: string }[] = [
-    { id: 'hotkeys', label: 'Hotkeys' },
-    { id: 'startup', label: 'Startup' },
-    { id: 'quicksave', label: 'Quick Save' },
-    { id: 'export', label: 'Export' },
-    { id: 'updates', label: 'Updates' },
+  const tabs: { id: SettingsTab; key: MsgKey }[] = [
+    { id: 'general', key: 'settings.tab.general' },
+    { id: 'hotkeys', key: 'settings.tab.hotkeys' },
+    { id: 'startup', key: 'settings.tab.startup' },
+    { id: 'quicksave', key: 'settings.tab.quicksave' },
+    { id: 'export', key: 'settings.tab.export' },
+    { id: 'updates', key: 'settings.tab.updates' },
   ];
 
   return (
@@ -181,7 +188,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       <div className="glass-card rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/10">
-          <h2 className="text-lg font-bold text-gradient">Settings</h2>
+          <h2 className="text-lg font-bold text-gradient">{t('settings.title')}</h2>
           <button
             onClick={handleCancel}
             className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all duration-200"
@@ -196,13 +203,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative ${
+              className={`flex-1 px-2 py-3 text-sm font-medium transition-all duration-200 relative ${
                 activeTab === tab.id
                   ? 'text-white'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              {tab.label}
+              {t(tab.key)}
               {activeTab === tab.id && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-purple-500" />
               )}
@@ -212,13 +219,44 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
+          {activeTab === 'general' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-slate-300 font-medium mb-2">{t('settings.language')}</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onLanguageChange('zh')}
+                    className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                      lang === 'zh'
+                        ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
+                        : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10'
+                    }`}
+                  >
+                    中文
+                  </button>
+                  <button
+                    onClick={() => onLanguageChange('en')}
+                    className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                      lang === 'en'
+                        ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
+                        : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10'
+                    }`}
+                  >
+                    English
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">{t('settings.language.hint')}</p>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'hotkeys' && (
             <div>
               <p className="text-sm text-slate-400 mb-4 p-3 rounded-lg bg-white/5 border border-white/5">
-                Click on a field and press your desired key combination.
+                {t('settings.hotkeys.desc')}
               </p>
               <HotkeyInput
-                label="Fullscreen Capture"
+                label={t('settings.hotkey.fullscreen')}
                 value={localConfig.hotkeys.fullscreen}
                 onChange={(value) =>
                   setLocalConfig((prev) => ({
@@ -228,7 +266,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 }
               />
               <HotkeyInput
-                label="Region Capture"
+                label={t('settings.hotkey.region')}
                 value={localConfig.hotkeys.region}
                 onChange={(value) =>
                   setLocalConfig((prev) => ({
@@ -238,7 +276,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 }
               />
               <HotkeyInput
-                label="Window Capture"
+                label={t('settings.hotkey.window')}
                 value={localConfig.hotkeys.window}
                 onChange={(value) =>
                   setLocalConfig((prev) => ({
@@ -263,7 +301,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     }))
                   }
                 />
-                <span className="text-slate-200">Launch on Windows startup</span>
+                <span className="text-slate-200">{t('settings.startup.launch')}</span>
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg bg-white/5 hover:bg-white/8 border border-white/5 transition-all duration-200">
@@ -277,7 +315,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     }))
                   }
                 />
-                <span className="text-slate-200">Start minimized to tray</span>
+                <span className="text-slate-200">{t('settings.startup.minimize')}</span>
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg bg-white/5 hover:bg-white/8 border border-white/5 transition-all duration-200">
@@ -291,7 +329,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     }))
                   }
                 />
-                <span className="text-slate-200">Show notification on capture</span>
+                <span className="text-slate-200">{t('settings.startup.notify')}</span>
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg bg-white/5 hover:bg-white/8 border border-white/5 transition-all duration-200">
@@ -306,8 +344,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   }
                 />
                 <div>
-                  <span className="text-slate-200">Close to tray instead of quitting</span>
-                  <p className="text-xs text-slate-400 mt-0.5">Use "Quit" from tray menu to fully exit</p>
+                  <span className="text-slate-200">{t('settings.startup.close.tray')}</span>
+                  <p className="text-xs text-slate-400 mt-0.5">{t('settings.startup.close.tray.hint')}</p>
                 </div>
               </label>
             </div>
@@ -316,14 +354,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {activeTab === 'quicksave' && (
             <div className="space-y-5">
               <div>
-                <label className="block text-sm text-slate-300 font-medium mb-2">Save Folder</label>
+                <label className="block text-sm text-slate-300 font-medium mb-2">{t('settings.quicksave.folder')}</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={localConfig.quickSave.folder}
                     readOnly
                     className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-violet-500/50"
-                    placeholder="Default: Pictures/OneSnap"
+                    placeholder={t('settings.quicksave.folder.ph')}
                   />
                   <button
                     onClick={handleSelectFolder}
@@ -331,13 +369,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20
                                text-slate-300 hover:text-white"
                   >
-                    Browse
+                    {t('settings.quicksave.browse')}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-slate-300 font-medium mb-2">Filename Pattern</label>
+                <label className="block text-sm text-slate-300 font-medium mb-2">{t('settings.quicksave.pattern')}</label>
                 <select
                   value={localConfig.quickSave.pattern}
                   onChange={(e) =>
@@ -362,7 +400,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {activeTab === 'export' && (
             <div className="space-y-5">
               <div>
-                <label className="block text-sm text-slate-300 font-medium mb-3">Default Format</label>
+                <label className="block text-sm text-slate-300 font-medium mb-3">{t('settings.export.format')}</label>
                 <div className="flex gap-3">
                   <label className={`flex-1 flex items-center justify-center gap-2 cursor-pointer p-3 rounded-xl font-medium transition-all duration-200 ${
                     localConfig.export.defaultFormat === 'png'
@@ -407,7 +445,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm text-slate-300 font-medium">JPEG Quality</label>
+                  <label className="text-sm text-slate-300 font-medium">{t('settings.export.quality')}</label>
                   <span className="text-xs text-violet-400 font-semibold bg-violet-500/10 px-2 py-0.5 rounded-full">{localConfig.export.jpegQuality}%</span>
                 </div>
                 <input
@@ -437,7 +475,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     }))
                   }
                 />
-                <span className="text-slate-200">Include styled background</span>
+                <span className="text-slate-200">{t('settings.export.includebg')}</span>
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg bg-white/5 hover:bg-white/8 border border-white/5 transition-all duration-200">
@@ -452,8 +490,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   }
                 />
                 <div>
-                  <span className="text-slate-200">Auto-copy to clipboard on capture</span>
-                  <p className="text-xs text-slate-400 mt-0.5">Uses your default export format (PNG/JPEG)</p>
+                  <span className="text-slate-200">{t('settings.export.autocopy')}</span>
+                  <p className="text-xs text-slate-400 mt-0.5">{t('settings.export.autocopy.hint')}</p>
                 </div>
               </label>
             </div>
@@ -473,14 +511,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   }
                 />
                 <div>
-                  <span className="text-slate-200">Check for updates on startup</span>
-                  <p className="text-xs text-slate-400 mt-0.5">Automatically check for new versions when the app starts</p>
+                  <span className="text-slate-200">{t('settings.updates.check')}</span>
+                  <p className="text-xs text-slate-400 mt-0.5">{t('settings.updates.check.hint')}</p>
                 </div>
               </label>
 
               <div className="p-3 rounded-lg bg-white/5 border border-white/5">
                 <p className="text-sm text-slate-400">
-                  OneSnap will notify you when a new version is available. Updates are downloaded from GitHub Releases as portable executables.
+                  {t('settings.updates.desc')}
                 </p>
               </div>
             </div>
@@ -501,7 +539,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                        bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20
                        text-slate-300 hover:text-white"
           >
-            Cancel
+            {t('settings.cancel')}
           </button>
           <button
             onClick={handleSave}
@@ -511,7 +549,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                        text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40
                        disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? t('settings.saving') : t('settings.save')}
           </button>
         </div>
       </div>

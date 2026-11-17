@@ -142,6 +142,7 @@ export namespace config {
 	    window: WindowConfig;
 	    editor: EditorConfig;
 	    update: UpdateConfig;
+	    language?: string;
 	    backgroundImages?: string[];
 	
 	    static createFrom(source: any = {}) {
@@ -157,7 +158,8 @@ export namespace config {
 	        this.window = this.convertValues(source["window"], WindowConfig);
 	        this.editor = this.convertValues(source["editor"], EditorConfig);
 	        this.update = this.convertValues(source["update"], UpdateConfig);
-		        this.backgroundImages = source["backgroundImages"];
+	        this.language = source["language"];
+	        this.backgroundImages = source["backgroundImages"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -178,8 +180,6 @@ export namespace config {
 		    return a;
 		}
 	}
-	
-	
 	
 	
 	

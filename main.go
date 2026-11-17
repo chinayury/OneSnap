@@ -56,13 +56,13 @@ func main() {
 	app := NewApp()
 
 	err = wails.Run(&options.App{
-		Title:            "OneSnap",
-		Width:            width,
-		Height:           height,
-		MinWidth:         800,
-		MinHeight:        600,
-		Frameless:        true,
-		StartHidden:      startHidden,
+		Title:       "OneSnap",
+		Width:       width,
+		Height:      height,
+		MinWidth:    800,
+		MinHeight:   600,
+		Frameless:   true,
+		StartHidden: startHidden,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

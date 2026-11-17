@@ -69,6 +69,8 @@ export function SaveEditorConfig(arg1:config.EditorConfig):Promise<void>;
 
 export function SaveImage(arg1:string,arg2:string):Promise<main.SaveImageResult>;
 
+export function SaveLanguage(arg1:string):Promise<void>;
+
 export function SelectFolder():Promise<string>;
 
 export function SetSkippedVersion(arg1:string):Promise<void>;

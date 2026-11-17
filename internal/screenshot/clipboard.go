@@ -30,7 +30,7 @@ var (
 	procGlobalUnlock = kernel32Clip.NewProc("GlobalUnlock")
 	procGlobalSize   = kernel32Clip.NewProc("GlobalSize")
 
-	shell32          = windows.NewLazySystemDLL("shell32.dll")
+	shell32           = windows.NewLazySystemDLL("shell32.dll")
 	procDragQueryFile = shell32.NewProc("DragQueryFileW")
 )
 
@@ -38,7 +38,7 @@ const (
 	CF_BITMAP        = 2
 	CF_DIBV5         = 17
 	CF_DIB           = 8
-	CF_HDROP         = 15 // File list format (File Explorer copy)
+	CF_HDROP         = 15                // File list format (File Explorer copy)
 	maxClipboardSize = 100 * 1024 * 1024 // 100MB max to prevent DoS
 )
 

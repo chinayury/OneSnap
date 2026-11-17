@@ -11,30 +11,30 @@ import (
 )
 
 var (
-	user32                   = syscall.NewLazyDLL("user32.dll")
-	kernel32                 = syscall.NewLazyDLL("kernel32.dll")
-	procRegisterClassExW     = user32.NewProc("RegisterClassExW")
-	procCreateWindowExW      = user32.NewProc("CreateWindowExW")
-	procDestroyWindow        = user32.NewProc("DestroyWindow")
-	procShowWindow           = user32.NewProc("ShowWindow")
-	procUpdateLayeredWindow  = user32.NewProc("UpdateLayeredWindow")
-	procGetDC                = user32.NewProc("GetDC")
-	procReleaseDC            = user32.NewProc("ReleaseDC")
-	procPeekMessageW         = user32.NewProc("PeekMessageW")
-	procTranslateMessage     = user32.NewProc("TranslateMessage")
-	procDispatchMessageW     = user32.NewProc("DispatchMessageW")
-	procDefWindowProcW       = user32.NewProc("DefWindowProcW")
-	procPostQuitMessage      = user32.NewProc("PostQuitMessage")
-	procSetCursor            = user32.NewProc("SetCursor")
-	procLoadCursorW          = user32.NewProc("LoadCursorW")
-	procGetAsyncKeyState     = user32.NewProc("GetAsyncKeyState")
-	procSetWindowPos         = user32.NewProc("SetWindowPos")
-	procUnregisterClassW     = user32.NewProc("UnregisterClassW")
-	procGetModuleHandleW     = kernel32.NewProc("GetModuleHandleW")
-	procSetCapture           = user32.NewProc("SetCapture")
-	procReleaseCapture       = user32.NewProc("ReleaseCapture")
-	procSetForegroundWindow  = user32.NewProc("SetForegroundWindow")
-	procSetFocus             = user32.NewProc("SetFocus")
+	user32                  = syscall.NewLazyDLL("user32.dll")
+	kernel32                = syscall.NewLazyDLL("kernel32.dll")
+	procRegisterClassExW    = user32.NewProc("RegisterClassExW")
+	procCreateWindowExW     = user32.NewProc("CreateWindowExW")
+	procDestroyWindow       = user32.NewProc("DestroyWindow")
+	procShowWindow          = user32.NewProc("ShowWindow")
+	procUpdateLayeredWindow = user32.NewProc("UpdateLayeredWindow")
+	procGetDC               = user32.NewProc("GetDC")
+	procReleaseDC           = user32.NewProc("ReleaseDC")
+	procPeekMessageW        = user32.NewProc("PeekMessageW")
+	procTranslateMessage    = user32.NewProc("TranslateMessage")
+	procDispatchMessageW    = user32.NewProc("DispatchMessageW")
+	procDefWindowProcW      = user32.NewProc("DefWindowProcW")
+	procPostQuitMessage     = user32.NewProc("PostQuitMessage")
+	procSetCursor           = user32.NewProc("SetCursor")
+	procLoadCursorW         = user32.NewProc("LoadCursorW")
+	procGetAsyncKeyState    = user32.NewProc("GetAsyncKeyState")
+	procSetWindowPos        = user32.NewProc("SetWindowPos")
+	procUnregisterClassW    = user32.NewProc("UnregisterClassW")
+	procGetModuleHandleW    = kernel32.NewProc("GetModuleHandleW")
+	procSetCapture          = user32.NewProc("SetCapture")
+	procReleaseCapture      = user32.NewProc("ReleaseCapture")
+	procSetForegroundWindow = user32.NewProc("SetForegroundWindow")
+	procSetFocus            = user32.NewProc("SetFocus")
 )
 
 // Command types for channel communication
@@ -51,6 +51,7 @@ type overlayCmd struct {
 	Screenshot *image.RGBA
 	Bounds     image.Rectangle
 	ScaleRatio float64
+	Lang       string
 	ResultCh   chan Result
 }
 
@@ -62,6 +63,7 @@ type Manager struct {
 	drawCtx    *DrawContext
 	screenshot *image.RGBA
 	scaleRatio float64
+	lang       string
 	selection  Selection
 	bounds     image.Rectangle
 	resultCh   chan Result
@@ -100,8 +102,8 @@ func (m *Manager) Start() error {
 	return <-readyCh
 }
 
-// Show displays the overlay with screenshot
-func (m *Manager) Show(screenshot *image.RGBA, bounds image.Rectangle, scaleRatio float64) <-chan Result {
+// Show displays the overlay with screenshot (lang: "zh" or "en" for hint text)
+func (m *Manager) Show(screenshot *image.RGBA, bounds image.Rectangle, scaleRatio float64, lang string) <-chan Result {
 	m.mu.Lock()
 	if m.isShowing {
 		m.mu.Unlock()
@@ -119,6 +121,7 @@ func (m *Manager) Show(screenshot *image.RGBA, bounds image.Rectangle, scaleRati
 		Screenshot: screenshot,
 		Bounds:     bounds,
 		ScaleRatio: scaleRatio,
+		Lang:       lang,
 		ResultCh:   resultCh,
 	}
 	return resultCh
@@ -227,6 +230,7 @@ func (m *Manager) handleShow(cmd overlayCmd) {
 	m.screenshot = cmd.Screenshot
 	m.bounds = cmd.Bounds
 	m.scaleRatio = cmd.ScaleRatio
+	m.lang = cmd.Lang
 	m.resultCh = cmd.ResultCh
 
 	// Get screen DC for creating compatible DC
@@ -299,7 +303,7 @@ func (m *Manager) redraw() {
 	scaleRatio := m.scaleRatio
 	m.mu.Unlock()
 
-	m.drawCtx.DrawOverlay(m.screenshot, &sel, scaleRatio)
+	m.drawCtx.DrawOverlay(m.screenshot, &sel, scaleRatio, m.lang)
 
 	// Update layered window
 	ptSrc := POINT{0, 0}

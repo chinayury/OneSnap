@@ -126,6 +126,10 @@ export function SaveImage(arg1, arg2) {
   return window['go']['main']['App']['SaveImage'](arg1, arg2);
 }
 
+export function SaveLanguage(arg1) {
+  return window['go']['main']['App']['SaveLanguage'](arg1);
+}
+
 export function SelectFolder() {
   return window['go']['main']['App']['SelectFolder']();
 }

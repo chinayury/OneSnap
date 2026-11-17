@@ -80,6 +80,7 @@ const (
 	MenuSettings   = 1005
 	MenuQuit       = 1006
 	MenuLibrary    = 1007 // Library window trigger (left-click on tray)
+	MenuLanguage   = 1008 // Toggle UI language (zh/en)
 )
 
 // NOTIFYICONDATAW structure
@@ -141,6 +142,7 @@ type TrayIcon struct {
 	nid      NOTIFYICONDATAW
 	hIcon    uintptr
 	tooltip  string
+	lang     string
 	visible  bool
 	callback TrayMenuCallback
 	onShow   func()
@@ -170,6 +172,47 @@ func (t *TrayIcon) SetCallback(cb TrayMenuCallback) {
 // SetOnShow sets the callback for when "Show" is selected or icon is double-clicked
 func (t *TrayIcon) SetOnShow(cb func()) {
 	t.onShow = cb
+}
+
+// SetLanguage updates the tray menu language ("zh" or "en")
+func (t *TrayIcon) SetLanguage(lang string) {
+	t.lang = lang
+}
+
+// menuLabel returns a tray menu label for the configured language
+func (t *TrayIcon) menuLabel(key string) string {
+	en := t.lang == "en"
+	switch key {
+	case "show":
+		if en {
+			return "Show OneSnap"
+		}
+		return "显示主窗口"
+	case "fullscreen":
+		if en {
+			return "Capture Fullscreen"
+		}
+		return "截取全屏"
+	case "region":
+		if en {
+			return "Capture Region"
+		}
+		return "截取区域"
+	case "window":
+		if en {
+			return "Capture Window"
+		}
+		return "截取窗口"
+	case "language":
+		// Always bilingual so the item is discoverable in either language
+		return "切换语言 / Switch Language"
+	case "quit":
+		if en {
+			return "Quit"
+		}
+		return "退出"
+	}
+	return ""
 }
 
 // Start initializes and shows the tray icon
@@ -320,14 +363,15 @@ func (t *TrayIcon) showMenu() {
 		return
 	}
 
-	// Add menu items
-	appendMenu(hMenu, MF_STRING, MenuShow, "显示主窗口")
+	// Add menu items (localized per configured language)
+	appendMenu(hMenu, MF_STRING, MenuShow, t.menuLabel("show"))
 	appendMenu(hMenu, MF_SEPARATOR, 0, "")
-	appendMenu(hMenu, MF_STRING, MenuFullscreen, "截取全屏")
-	appendMenu(hMenu, MF_STRING, MenuRegion, "截取区域")
-	appendMenu(hMenu, MF_STRING, MenuWindow, "截取窗口")
+	appendMenu(hMenu, MF_STRING, MenuFullscreen, t.menuLabel("fullscreen"))
+	appendMenu(hMenu, MF_STRING, MenuRegion, t.menuLabel("region"))
+	appendMenu(hMenu, MF_STRING, MenuWindow, t.menuLabel("window"))
 	appendMenu(hMenu, MF_SEPARATOR, 0, "")
-	appendMenu(hMenu, MF_STRING, MenuQuit, "退出")
+	appendMenu(hMenu, MF_STRING, MenuLanguage, t.menuLabel("language"))
+	appendMenu(hMenu, MF_STRING, MenuQuit, t.menuLabel("quit"))
 
 	// Get cursor position
 	var pt POINT

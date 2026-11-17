@@ -28,13 +28,13 @@ var (
 
 // GDI font constants
 const (
-	FW_BOLD              = 700
-	DEFAULT_CHARSET      = 1
-	ANTIALIASED_QUALITY  = 4
-	CLIP_DEFAULT_PRECIS  = 0
-	OUT_DEFAULT_PRECIS   = 0
-	DEFAULT_PITCH        = 0
-	FF_DONTCARE          = 0
+	FW_BOLD             = 700
+	DEFAULT_CHARSET     = 1
+	ANTIALIASED_QUALITY = 4
+	CLIP_DEFAULT_PRECIS = 0
+	OUT_DEFAULT_PRECIS  = 0
+	DEFAULT_PITCH       = 0
+	FF_DONTCARE         = 0
 )
 
 // DrawContext manages GDI resources for overlay drawing
@@ -93,8 +93,8 @@ func NewDrawContext(screenDC uintptr, width, height int) (*DrawContext, error) {
 	}, nil
 }
 
-// DrawOverlay renders the selection overlay
-func (dc *DrawContext) DrawOverlay(screenshot *image.RGBA, sel *Selection, scaleRatio float64) {
+// DrawOverlay renders the selection overlay (lang selects hint text language)
+func (dc *DrawContext) DrawOverlay(screenshot *image.RGBA, sel *Selection, scaleRatio float64, lang string) {
 	// Ensure the scaled font exists (scaleRatio is constant per session)
 	dc.ensureFont(scaleRatio)
 
@@ -125,8 +125,8 @@ func (dc *DrawContext) DrawOverlay(screenshot *image.RGBA, sel *Selection, scale
 		dc.drawSizeIndicator(x1, y2+8, scaledW, scaledH)
 	}
 
-	// 8. Draw instructions (Chinese)
-	dc.drawInstructions(sel)
+	// 8. Draw instructions (localized)
+	dc.drawInstructions(sel, lang)
 }
 
 // ensureFont creates the GDI font once, sized for the display scale
@@ -141,18 +141,18 @@ func (dc *DrawContext) ensureFont(scaleRatio float64) {
 	dc.fontSize = size
 
 	dc.hFont, _, _ = procCreateFontW.Call(
-		uintptr(-size),          // Height (negative = em height)
-		0,                       // Width
-		0, 0,                    // Escapement, Orientation
-		uintptr(FW_BOLD),        // Weight
-		0,                       // Italic
-		0,                       // Underline
-		0,                       // StrikeOut
-		uintptr(DEFAULT_CHARSET),// CharSet
+		uintptr(-size), // Height (negative = em height)
+		0,              // Width
+		0, 0,           // Escapement, Orientation
+		uintptr(FW_BOLD),         // Weight
+		0,                        // Italic
+		0,                        // Underline
+		0,                        // StrikeOut
+		uintptr(DEFAULT_CHARSET), // CharSet
 		uintptr(OUT_DEFAULT_PRECIS),
 		uintptr(CLIP_DEFAULT_PRECIS),
 		uintptr(ANTIALIASED_QUALITY),
-		0,                       // Quality preset bits (pitch|family)
+		0, // Quality preset bits (pitch|family)
 		uintptr(DEFAULT_PITCH|FF_DONTCARE),
 		uintptr(unsafe.Pointer(fontFaceNamePtr())),
 	)
@@ -277,10 +277,10 @@ func (dc *DrawContext) fillRectPixels(x, y, w, h int, color uint32) {
 func (dc *DrawContext) drawSelectionBorder(x, y, w, h int) {
 	// Windows blue: #0078D7 -> premultiplied BGRA (alpha 255)
 	blue := uint32((255 << 24) | (0xD7 << 16) | (0x78 << 8) | 0x00)
-	dc.fillRectPixels(x, y, w, 2, blue)                 // Top
-	dc.fillRectPixels(x, y+h-2, w, 2, blue)             // Bottom
-	dc.fillRectPixels(x, y, 2, h, blue)                 // Left
-	dc.fillRectPixels(x+w-2, y, 2, h, blue)             // Right
+	dc.fillRectPixels(x, y, w, 2, blue)     // Top
+	dc.fillRectPixels(x, y+h-2, w, 2, blue) // Bottom
+	dc.fillRectPixels(x, y, 2, h, blue)     // Left
+	dc.fillRectPixels(x+w-2, y, 2, h, blue) // Right
 }
 
 // drawCornerHandles draws 6x6 blue squares at corners
@@ -306,13 +306,21 @@ func (dc *DrawContext) drawSizeIndicator(x, y, w, h int) {
 	dc.drawPillText(x, y, text, 0xD77800) // Windows blue pill (#0078D7 as COLORREF BGR)
 }
 
-// drawInstructions draws the instruction pill at top center (Chinese)
-func (dc *DrawContext) drawInstructions(sel *Selection) {
+// drawInstructions draws the instruction pill at top center (localized)
+func (dc *DrawContext) drawInstructions(sel *Selection, lang string) {
 	var text string
 	if sel.IsDragging && sel.SpaceHeld {
-		text = "空格 + 拖动：调整选区位置"
+		if lang == "en" {
+			text = "Space + Drag: reposition"
+		} else {
+			text = "空格 + 拖动：调整选区位置"
+		}
 	} else {
-		text = "拖动选取区域 · 空格移动选区 · Esc 取消"
+		if lang == "en" {
+			text = "Drag to select · Space to move · Esc to cancel"
+		} else {
+			text = "拖动选取区域 · 空格移动选区 · Esc 取消"
+		}
 	}
 
 	pillX := (dc.width - dc.measurePill(text)) / 2

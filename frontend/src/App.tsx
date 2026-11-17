@@ -26,6 +26,7 @@ import {
   GetConfig,
   GetEditorConfig,
   SaveEditorConfig,
+  SaveLanguage,
   OpenImage,
   GetClipboardImage,
   CheckForUpdate,
@@ -35,6 +36,7 @@ import {
 import { updater } from '../wailsjs/go/models';
 import { EventsOn, EventsOff, WindowGetSize } from '../wailsjs/runtime/runtime';
 import { extractDominantEdgeColor } from './utils/extract-edge-color';
+import { LangContext, Lang, translate, isLang, MsgKey } from './i18n';
 
 // Default editor settings (used before Go config loads)
 const DEFAULT_EDITOR_SETTINGS = {
@@ -134,6 +136,14 @@ function App() {
   const [showWindowPicker, setShowWindowPicker] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | undefined>();
+
+  // UI language (persisted in Go config; switchable in Settings > General or from the tray)
+  const [lang, setLangState] = useState<Lang>('zh');
+  const t = useCallback((key: MsgKey, params?: Record<string, string | number>) => translate(lang, key, params), [lang]);
+  const setLang = useCallback((l: Lang) => {
+    setLangState(l);
+    SaveLanguage(l).catch(err => console.error('Failed to save language:', err));
+  }, []);
 
   // Editor settings (loaded from Go config on startup)
   const [padding, setPadding] = useState(DEFAULT_EDITOR_SETTINGS.padding);
@@ -284,6 +294,9 @@ function App() {
         if (cfg.export?.jpegQuality) {
           setJpegQuality(cfg.export.jpegQuality);
         }
+        if (isLang(cfg.language)) {
+          setLangState(cfg.language);
+        }
       } catch (err) {
         console.error('Failed to load export settings:', err);
       }
@@ -409,14 +422,14 @@ function App() {
         // Selection result comes via 'region:selected' event
       } catch (error) {
         console.error('Failed to start region capture:', error);
-        setStatusMessage('Failed to start region capture');
+        setStatusMessage(t('status.region.failed'));
         setTimeout(() => setStatusMessage(undefined), 3000);
       }
       return;
     }
 
     setIsCapturing(true);
-    setStatusMessage('Capturing...');
+    setStatusMessage(t('status.capturing'));
 
     try {
       let result: CaptureResult;
@@ -435,24 +448,24 @@ function App() {
       // Clear last saved path since this is a new capture
       setLastSavedPath(null);
       // Show capture success notification
-      setStatusMessage('Fullscreen captured');
+      setStatusMessage(t('status.fullscreen.captured'));
       setTimeout(() => setStatusMessage(undefined), 2000);
 
       // Trigger auto-copy of styled canvas (handled by useEffect)
       setPendingAutoCopy(true);
     } catch (error) {
       console.error('Capture failed:', error);
-      setStatusMessage('Capture failed');
+      setStatusMessage(t('status.capture.failed'));
       setTimeout(() => setStatusMessage(undefined), 3000);
     }
 
     setIsCapturing(false);
-  }, [resetAnnotations]);
+  }, [resetAnnotations, t]);
 
   const handleWindowSelect = async (window: WindowInfo) => {
     setShowWindowPicker(false);
     setIsCapturing(true);
-    setStatusMessage(`Capturing: ${window.title}`);
+    setStatusMessage(t('status.capturing'));
 
     try {
       const result = await CaptureWindow(window.handle) as CaptureResult;
@@ -464,14 +477,14 @@ function App() {
       // Clear last saved path since this is a new capture
       setLastSavedPath(null);
       // Show capture success notification
-      setStatusMessage('Window captured');
+      setStatusMessage(t('status.window.captured'));
       setTimeout(() => setStatusMessage(undefined), 2000);
 
       // Trigger auto-copy of styled canvas (handled by useEffect)
       setPendingAutoCopy(true);
     } catch (error) {
       console.error('Window capture failed:', error);
-      setStatusMessage('Capture failed');
+      setStatusMessage(t('status.capture.failed'));
       setTimeout(() => setStatusMessage(undefined), 3000);
     }
 
@@ -490,7 +503,7 @@ function App() {
     // Clear last saved path since this is a new capture
     setLastSavedPath(null);
     // Show capture success notification
-    setStatusMessage('Region captured');
+    setStatusMessage(t('status.region.captured'));
     setTimeout(() => setStatusMessage(undefined), 2000);
 
     // Restore window to normal state
@@ -498,7 +511,7 @@ function App() {
 
     // Trigger auto-copy of styled canvas (handled by useEffect)
     setPendingAutoCopy(true);
-  }, [resetAnnotations]);
+  }, [resetAnnotations, t]);
 
   const handleClear = useCallback(() => {
     setScreenshot(null);
@@ -517,10 +530,10 @@ function App() {
     });
     setCropArea(null);
     setCropMode(false);
-  }, [resetAnnotations]);
+  }, [resetAnnotations, t]);
 
   const handleImportImage = useCallback(async () => {
-    setStatusMessage('Opening file dialog...');
+    setStatusMessage(t('status.import.open'));
 
     try {
       const result = await OpenImage();
@@ -545,21 +558,21 @@ function App() {
       });
       setCropArea(null);
       setCropMode(false);
-      setStatusMessage('Image imported successfully');
+      setStatusMessage(t('status.import.done'));
       setTimeout(() => setStatusMessage(undefined), 2000);
     } catch (error) {
       console.error('Import failed:', error);
       setStatusMessage('Failed to import image');
       setTimeout(() => setStatusMessage(undefined), 3000);
     }
-  }, [resetAnnotations]);
+  }, [resetAnnotations, t]);
 
   const handleClipboardCapture = useCallback(async () => {
     try {
       const result = await GetClipboardImage();
 
       if (!result) {
-        setStatusMessage('No image in clipboard');
+        setStatusMessage(t('status.clipboard.none'));
         setTimeout(() => setStatusMessage(undefined), 3000);
         return;
       }
@@ -578,14 +591,14 @@ function App() {
       });
       setCropArea(null);
       setCropMode(false);
-      setStatusMessage('Image pasted from clipboard');
+      setStatusMessage(t('status.clipboard.pasted'));
       setTimeout(() => setStatusMessage(undefined), 2000);
     } catch (error) {
       console.error('Clipboard paste failed:', error);
-      setStatusMessage('No image in clipboard');
+      setStatusMessage(t('status.clipboard.none'));
       setTimeout(() => setStatusMessage(undefined), 3000);
     }
-  }, [resetAnnotations]);
+  }, [resetAnnotations, t]);
 
   // Drag & drop state
   const [isDragging, setIsDragging] = useState(false);
@@ -602,7 +615,7 @@ function App() {
     const file = files[0];
     // Check if it's an image file
     if (!file.type.startsWith('image/')) {
-      setStatusMessage('Only image files are supported');
+      setStatusMessage(t('status.drop.invalid'));
       setTimeout(() => setStatusMessage(undefined), 3000);
       return;
     }
@@ -632,21 +645,21 @@ function App() {
         });
         setCropArea(null);
         setCropMode(false);
-        setStatusMessage(`Imported: ${file.name}`);
+        setStatusMessage(t('status.imported', { name: file.name }));
         setTimeout(() => setStatusMessage(undefined), 2000);
       };
       img.onerror = () => {
-        setStatusMessage('Failed to load image');
+        setStatusMessage(t('status.load.failed'));
         setTimeout(() => setStatusMessage(undefined), 3000);
       };
       img.src = reader.result as string;
     };
     reader.onerror = () => {
-      setStatusMessage('Failed to read file');
+      setStatusMessage(t('status.read.failed'));
       setTimeout(() => setStatusMessage(undefined), 3000);
     };
     reader.readAsDataURL(file);
-  }, [resetAnnotations]);
+  }, [resetAnnotations, t]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -680,7 +693,7 @@ function App() {
         // Selection result comes via 'region:selected' event
       } catch (error) {
         console.error('Failed to start region capture:', error);
-        setStatusMessage('Failed to start region capture');
+        setStatusMessage(t('status.region.failed'));
         setTimeout(() => setStatusMessage(undefined), 3000);
       }
     };
@@ -707,6 +720,12 @@ function App() {
     EventsOn('hotkey:window', handleWindow);
     EventsOn('region:selected', handleRegionSelected);
     EventsOn('tray:library', handleTrayLibrary);
+    // Language switched from the tray menu
+    EventsOn('lang:changed', (l: unknown) => {
+      if (isLang(l)) {
+        setLangState(l);
+      }
+    });
 
     return () => {
       EventsOff('hotkey:fullscreen');
@@ -714,6 +733,7 @@ function App() {
       EventsOff('hotkey:window');
       EventsOff('region:selected');
       EventsOff('tray:library');
+      EventsOff('lang:changed');
     };
   }, [handleCapture, handleNativeRegionSelect]);
 
@@ -751,15 +771,15 @@ function App() {
         setCropMode(false);
         // Track source path for "Save" functionality
         setLastSavedPath(image.filepath);
-        setStatusMessage('Opened from library');
+        setStatusMessage(t('status.opened.library'));
         setTimeout(() => setStatusMessage(undefined), 2000);
       }
     } catch (error) {
       console.error('Failed to open image:', error);
-      setStatusMessage('Failed to open image');
+      setStatusMessage(t('status.open.failed'));
       setTimeout(() => setStatusMessage(undefined), 3000);
     }
-  }, [resetAnnotations]);
+  }, [resetAnnotations, t]);
 
   const handleLibraryCapture = useCallback(() => {
     setShowLibrary(false);
@@ -1214,40 +1234,40 @@ function App() {
   const handleSave = useCallback(async (format: 'png' | 'jpeg') => {
     const dataUrl = getCanvasDataUrl(format);
     if (!dataUrl) {
-      setStatusMessage('Export failed: No canvas available');
+      setStatusMessage(t('status.export.no.canvas'));
       return;
     }
 
     setIsExporting(true);
-    setStatusMessage('Saving...');
+    setStatusMessage(t('status.saving'));
 
     try {
       const base64Data = getBase64FromDataUrl(dataUrl);
       const result = await SaveImage(base64Data, format);
 
       if (result.success) {
-        setStatusMessage(`Saved to ${result.filePath}`);
+        setStatusMessage(t('status.saved', { path: result.filePath }));
       } else {
-        setStatusMessage(result.error || 'Save failed');
+        setStatusMessage(result.error || t('status.save.failed'));
       }
     } catch (error) {
       console.error('Save failed:', error);
-      setStatusMessage('Save failed');
+      setStatusMessage(t('status.save.failed'));
     }
 
     setIsExporting(false);
     setTimeout(() => setStatusMessage(undefined), 3000);
-  }, [getCanvasDataUrl]);
+  }, [getCanvasDataUrl, t]);
 
   const handleQuickSave = useCallback(async (format: 'png' | 'jpeg') => {
     const dataUrl = getCanvasDataUrl(format);
     if (!dataUrl) {
-      setStatusMessage('Export failed: No canvas available');
+      setStatusMessage(t('status.export.no.canvas'));
       return;
     }
 
     setIsExporting(true);
-    setStatusMessage('Saving...');
+    setStatusMessage(t('status.saving'));
 
     try {
       const base64Data = getBase64FromDataUrl(dataUrl);
@@ -1258,41 +1278,41 @@ function App() {
         // Auto-copy path to clipboard after QuickSave (per user validation)
         try {
           await navigator.clipboard.writeText(result.filePath);
-          setStatusMessage(`Saved & path copied: ${result.filePath}`);
+          setStatusMessage(t('status.saved.copied', { path: result.filePath }));
         } catch {
           // Clipboard write may fail in some contexts, still show save success
-          setStatusMessage(`Saved to ${result.filePath}`);
+          setStatusMessage(t('status.saved', { path: result.filePath }));
         }
       } else {
-        setStatusMessage(result.error || 'Quick save failed');
+        setStatusMessage(result.error || t('status.quick.failed'));
       }
     } catch (error) {
       console.error('Quick save failed:', error);
-      setStatusMessage('Quick save failed');
+      setStatusMessage(t('status.quick.failed'));
     }
 
     setIsExporting(false);
     setTimeout(() => setStatusMessage(undefined), 3000);
-  }, [getCanvasDataUrl]);
+  }, [getCanvasDataUrl, t]);
 
   // Copy file path to clipboard
   const handleCopyPath = useCallback(async () => {
     if (!lastSavedPath) {
-      setStatusMessage('No saved file path to copy');
+      setStatusMessage(t('status.path.none'));
       setTimeout(() => setStatusMessage(undefined), 2000);
       return;
     }
 
     try {
       await navigator.clipboard.writeText(lastSavedPath);
-      setStatusMessage('Path copied to clipboard');
+      setStatusMessage(t('status.path.copied'));
       setTimeout(() => setStatusMessage(undefined), 2000);
     } catch (error) {
       console.error('Copy path failed:', error);
-      setStatusMessage('Failed to copy path');
+      setStatusMessage(t('status.path.failed'));
       setTimeout(() => setStatusMessage(undefined), 2000);
     }
-  }, [lastSavedPath]);
+  }, [lastSavedPath, t]);
 
   // Helper to copy styled canvas to clipboard (used by auto-copy and manual copy)
   const copyStyledCanvasToClipboard = useCallback(async (): Promise<boolean> => {
@@ -1361,24 +1381,24 @@ function App() {
   // Manual copy to clipboard handler (uses helper)
   const handleCopyToClipboard = useCallback(async () => {
     if (!stageRef.current || !screenshot) {
-      setStatusMessage('Copy failed: No canvas available');
+      setStatusMessage(t('status.copy.none'));
       return;
     }
 
     setIsExporting(true);
-    setStatusMessage('Copying to clipboard...');
+    setStatusMessage(t('status.copying'));
 
     const success = await copyStyledCanvasToClipboard();
 
     if (success) {
-      setStatusMessage('Copied to clipboard!');
+      setStatusMessage(t('status.copied'));
     } else {
-      setStatusMessage('Copy to clipboard failed');
+      setStatusMessage(t('status.copy.failed'));
     }
 
     setIsExporting(false);
     setTimeout(() => setStatusMessage(undefined), 2000);
-  }, [screenshot, copyStyledCanvasToClipboard]);
+  }, [screenshot, copyStyledCanvasToClipboard, t]);
 
   // Auto-copy styled canvas to clipboard after capture completes
   useEffect(() => {
@@ -1405,7 +1425,7 @@ function App() {
         if (cancelled) return;
 
         if (success) {
-          setStatusMessage('Copied to clipboard!');
+          setStatusMessage(t('status.copied'));
           setTimeout(() => setStatusMessage(undefined), 2000);
         }
       } catch (err) {
@@ -1422,7 +1442,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [pendingAutoCopy, screenshot, copyStyledCanvasToClipboard]);
+  }, [pendingAutoCopy, screenshot, copyStyledCanvasToClipboard, t]);
 
   // Keyboard shortcuts for export, import, and clipboard paste
   useEffect(() => {
@@ -1465,6 +1485,7 @@ function App() {
   }, [screenshot, handleSave, handleQuickSave, handleCopyToClipboard, handleImportImage, handleClipboardCapture]);
 
   return (
+    <LangContext.Provider value={lang}>
     <div
       className="flex flex-col h-screen bg-transparent relative"
       onDrop={handleDrop}
@@ -1477,8 +1498,8 @@ function App() {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-violet-500/20 backdrop-blur-sm border-2 border-dashed border-violet-400 rounded-lg m-2 pointer-events-none">
           <div className="text-center">
             <div className="text-4xl mb-2">📷</div>
-            <div className="text-lg font-semibold text-violet-200">Drop image to import</div>
-            <div className="text-sm text-violet-300/70">PNG, JPEG, GIF, WebP supported</div>
+            <div className="text-lg font-semibold text-violet-200">{t('drop.title')}</div>
+            <div className="text-sm text-violet-300/70">{t('drop.formats')}</div>
           </div>
         </div>
       )}
@@ -1644,6 +1665,8 @@ function App() {
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
+        lang={lang}
+        onLanguageChange={setLang}
       />
 
       <UpdateModal
@@ -1652,6 +1675,7 @@ function App() {
         updateInfo={updateInfo}
       />
     </div>
+    </LangContext.Provider>
   );
 }
 

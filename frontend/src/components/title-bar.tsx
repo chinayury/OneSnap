@@ -1,13 +1,17 @@
 import { WindowMinimise, WindowToggleMaximise, Quit, WindowHide } from '../../wailsjs/runtime/runtime';
 import { Minus, Square, X, Camera } from 'lucide-react';
 import { GetConfig } from '../../wailsjs/go/main/App';
+import { Tooltip } from './tooltip';
+import { useT } from '../i18n';
 
 interface TitleBarProps {
   title?: string;
   onMinimize?: () => void;
 }
 
-export function TitleBar({ title = 'OneSnap', onMinimize }: TitleBarProps) {
+export function TitleBar({ title, onMinimize }: TitleBarProps) {
+  const t = useT();
+
   const handleClose = async () => {
     try {
       const cfg = await GetConfig();
@@ -38,7 +42,7 @@ export function TitleBar({ title = 'OneSnap', onMinimize }: TitleBarProps) {
         <div className="relative">
           <Camera className="w-5 h-5 text-violet-400" />
         </div>
-        <span className="text-sm font-semibold text-gradient">{title}</span>
+        <span className="text-sm font-semibold text-gradient">{title ?? t('app.name')}</span>
       </div>
 
       {/* Window controls - not draggable */}
@@ -47,34 +51,37 @@ export function TitleBar({ title = 'OneSnap', onMinimize }: TitleBarProps) {
         style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
       >
         {/* Minimize button */}
-        <button
-          onClick={() => WindowMinimise()}
-          className="w-11 h-full flex items-center justify-center text-slate-400
-                     hover:bg-white/10 hover:text-white transition-all duration-200"
-          title="Minimize"
-        >
-          <Minus className="w-4 h-4" />
-        </button>
+        <Tooltip text={t('window.minimize')}>
+          <button
+            onClick={() => WindowMinimise()}
+            className="w-11 h-full flex items-center justify-center text-slate-400
+                       hover:bg-white/10 hover:text-white transition-all duration-200"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+        </Tooltip>
 
         {/* Maximize/Restore button */}
-        <button
-          onClick={() => WindowToggleMaximise()}
-          className="w-11 h-full flex items-center justify-center text-slate-400
-                     hover:bg-white/10 hover:text-white transition-all duration-200"
-          title="Maximize"
-        >
-          <Square className="w-3.5 h-3.5" />
-        </button>
+        <Tooltip text={t('window.maximize')}>
+          <button
+            onClick={() => WindowToggleMaximise()}
+            className="w-11 h-full flex items-center justify-center text-slate-400
+                       hover:bg-white/10 hover:text-white transition-all duration-200"
+          >
+            <Square className="w-3.5 h-3.5" />
+          </button>
+        </Tooltip>
 
         {/* Close button */}
-        <button
-          onClick={handleClose}
-          className="w-11 h-full flex items-center justify-center text-slate-400
-                     hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:text-white transition-all duration-200"
-          title="Close"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <Tooltip text={t('window.close')}>
+          <button
+            onClick={handleClose}
+            className="w-11 h-full flex items-center justify-center text-slate-400
+                       hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:text-white transition-all duration-200"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { LibraryImage } from '../types';
 import { GetLibraryImages, DeleteScreenshot } from '../../wailsjs/go/main/App';
 import { X, Camera, Edit, Trash2, RefreshCw, Image, Calendar } from 'lucide-react';
+import { Tooltip } from './tooltip';
+import { useT } from '../i18n';
 
 interface LibraryWindowProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface LibraryWindowProps {
 }
 
 export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWindowProps) {
+  const t = useT();
   const [images, setImages] = useState<LibraryImage[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [isLoading, setIsLoading] = useState(false);
@@ -135,7 +138,7 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
   const handleDelete = async () => {
     if (!selectedImage) return;
 
-    const confirmed = window.confirm('Delete this screenshot? This cannot be undone.');
+    const confirmed = window.confirm(t('library.delete.confirm'));
     if (!confirmed) return;
 
     setIsDeleting(true);
@@ -184,9 +187,9 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image className="w-5 h-5 text-violet-400" />
-            <h2 className="text-lg font-bold text-gradient">Screenshot Library</h2>
+            <h2 className="text-lg font-bold text-gradient">{t('library.title')}</h2>
             <span className="text-sm text-slate-400">
-              {images.length} {images.length === 1 ? 'image' : 'images'}
+              {t('library.count', { n: images.length })}
             </span>
           </div>
           <button
@@ -207,21 +210,21 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
                   <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
                   <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" style={{ animationDelay: '0.4s' }} />
                 </div>
-                <span>Loading screenshots...</span>
+                <span>{t('library.loading')}</span>
               </div>
             </div>
           ) : images.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Image className="w-16 h-16 text-slate-600 mb-4" />
-              <p className="text-lg font-medium mb-2">No screenshots yet</p>
-              <p className="text-sm text-slate-500 mb-6">Capture your first screenshot to see it here</p>
+              <p className="text-lg font-medium mb-2">{t('library.empty.title')}</p>
+              <p className="text-sm text-slate-500 mb-6">{t('library.empty.desc')}</p>
               <button
                 onClick={onCapture}
                 className="px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-xl
                            transition-all duration-200 flex items-center gap-2"
               >
                 <Camera className="w-4 h-4" />
-                Capture Screenshot
+                {t('library.capture')}
               </button>
             </div>
           ) : (
@@ -279,54 +282,62 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
         {/* Action Bar */}
         <div className="p-4 border-t border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button
-              onClick={loadImages}
-              disabled={isLoading}
-              className="px-3 py-2 text-slate-400 hover:text-violet-400 transition-all duration-200
-                         text-sm flex items-center gap-2 rounded-lg hover:bg-white/5 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+            <Tooltip text={t('tip.library.refresh')}>
+              <button
+                onClick={loadImages}
+                disabled={isLoading}
+                className="px-3 py-2 text-slate-400 hover:text-violet-400 transition-all duration-200
+                           text-sm flex items-center gap-2 rounded-lg hover:bg-white/5 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                {t('library.refresh')}
+              </button>
+            </Tooltip>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={onCapture}
-              className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl
-                         transition-all duration-200 flex items-center gap-2 border border-white/10"
-            >
-              <Camera className="w-4 h-4" />
-              Capture
-            </button>
+            <Tooltip text={t('tip.library.capture')}>
+              <button
+                onClick={onCapture}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl
+                           transition-all duration-200 flex items-center gap-2 border border-white/10"
+              >
+                <Camera className="w-4 h-4" />
+                {t('library.capture')}
+              </button>
+            </Tooltip>
 
-            <button
-              onClick={handleEdit}
-              disabled={!selectedImage}
-              className="px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-xl
-                         transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Edit className="w-4 h-4" />
-              Edit
-            </button>
+            <Tooltip text={t('tip.library.edit')}>
+              <button
+                onClick={handleEdit}
+                disabled={!selectedImage}
+                className="px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white rounded-xl
+                           transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Edit className="w-4 h-4" />
+                {t('library.edit')}
+              </button>
+            </Tooltip>
 
-            <button
-              onClick={handleDelete}
-              disabled={!selectedImage || isDeleting}
-              className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-xl
-                         transition-all duration-200 flex items-center gap-2 border border-rose-500/30
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </button>
+            <Tooltip text={t('tip.library.delete')}>
+              <button
+                onClick={handleDelete}
+                disabled={!selectedImage || isDeleting}
+                className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-xl
+                           transition-all duration-200 flex items-center gap-2 border border-rose-500/30
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-4 h-4" />
+                {t('library.delete')}
+              </button>
+            </Tooltip>
 
             <button
               onClick={onClose}
               className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl
                          transition-all duration-200 border border-white/10"
             >
-              Close
+              {t('library.close')}
             </button>
           </div>
         </div>

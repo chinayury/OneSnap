@@ -7,6 +7,7 @@ import { AnnotationShapes } from './annotation-shapes';
 import { SpotlightOverlay } from './spotlight-overlay';
 import { CropOverlay } from './crop-overlay';
 import { ImageIcon } from 'lucide-react';
+import { useT } from '../i18n';
 
 interface EditorCanvasProps {
   screenshot: CaptureResult | null;
@@ -279,6 +280,7 @@ export function EditorCanvas({
 }: EditorCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const internalStageRef = useRef<Konva.Stage>(null);
+  const t = useT();
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
   const [baseScale, setBaseScale] = useState(1); // Auto-fit scale
   const [userZoom, setUserZoom] = useState(1); // User zoom multiplier
@@ -710,8 +712,8 @@ export function EditorCanvas({
       <div className="flex-1 flex items-center justify-center bg-slate-900">
         <div className="text-center text-slate-500">
           <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-50" strokeWidth={1} />
-          <p className="text-lg">No screenshot</p>
-          <p className="text-sm mt-1">Capture a screenshot to start editing</p>
+          <p className="text-lg">{t('editor.empty.title')}</p>
+          <p className="text-sm mt-1">{t('editor.empty.desc')}</p>
         </div>
       </div>
     );

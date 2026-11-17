@@ -10,11 +10,11 @@ import (
 )
 
 var (
-	user32              = syscall.NewLazyDLL("user32.dll")
-	procRegisterHotKey  = user32.NewProc("RegisterHotKey")
+	user32               = syscall.NewLazyDLL("user32.dll")
+	procRegisterHotKey   = user32.NewProc("RegisterHotKey")
 	procUnregisterHotKey = user32.NewProc("UnregisterHotKey")
-	procGetMessageW     = user32.NewProc("GetMessageW")
-	procPeekMessageW    = user32.NewProc("PeekMessageW")
+	procGetMessageW      = user32.NewProc("GetMessageW")
+	procPeekMessageW     = user32.NewProc("PeekMessageW")
 )
 
 // Key modifier constants

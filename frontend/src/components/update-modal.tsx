@@ -2,6 +2,7 @@ import { X, Download, ExternalLink, SkipForward } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { OpenURL, SetSkippedVersion } from '../../wailsjs/go/main/App';
 import { updater } from '../../wailsjs/go/models';
+import { useT } from '../i18n';
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface UpdateModalProps {
 }
 
 export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
+  const t = useT();
   if (!isOpen || !updateInfo) return null;
 
   const handleDownload = () => {
@@ -35,7 +37,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
   // Parse release notes - take first 500 chars
   const releaseNotes = updateInfo.releaseNotes
     ? updateInfo.releaseNotes.substring(0, 500) + (updateInfo.releaseNotes.length > 500 ? '...' : '')
-    : 'No release notes available.';
+    : t('update.no.notes');
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
@@ -47,8 +49,8 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
               <Download className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gradient">Update Available</h2>
-              <p className="text-xs text-slate-400">A new version is ready to download</p>
+              <h2 className="text-lg font-bold text-gradient">{t('update.title')}</h2>
+              <p className="text-xs text-slate-400">{t('update.desc')}</p>
             </div>
           </div>
           <button
@@ -64,12 +66,12 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
           {/* Version info */}
           <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
             <div>
-              <p className="text-xs text-slate-400 mb-1">Current Version</p>
+              <p className="text-xs text-slate-400 mb-1">{t('update.current')}</p>
               <p className="text-slate-200 font-mono">{updateInfo.currentVersion}</p>
             </div>
             <div className="text-2xl text-slate-500">→</div>
             <div className="text-right">
-              <p className="text-xs text-slate-400 mb-1">New Version</p>
+              <p className="text-xs text-slate-400 mb-1">{t('update.new')}</p>
               <p className="text-emerald-400 font-mono font-semibold">{updateInfo.latestVersion}</p>
             </div>
           </div>
@@ -77,13 +79,13 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
           {/* Release notes */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-slate-300 font-medium">What's New</p>
+              <p className="text-sm text-slate-300 font-medium">{t('update.whats.new')}</p>
               <button
                 onClick={handleViewRelease}
                 className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
-                View on GitHub
+                {t('update.view.github')}
               </button>
             </div>
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 max-h-48 overflow-y-auto prose-changelog">
@@ -123,7 +125,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                        text-slate-400 hover:text-slate-200"
           >
             <SkipForward className="w-4 h-4" />
-            Skip this version
+            {t('update.skip')}
           </button>
           <div className="flex gap-3">
             <button
@@ -132,7 +134,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                          bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20
                          text-slate-300 hover:text-white"
             >
-              Later
+              {t('update.later')}
             </button>
             <button
               onClick={handleDownload}
@@ -141,7 +143,7 @@ export function UpdateModal({ isOpen, onClose, updateInfo }: UpdateModalProps) {
                          text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
             >
               <Download className="w-4 h-4" />
-              Download
+              {t('update.download')}
             </button>
           </div>
         </div>

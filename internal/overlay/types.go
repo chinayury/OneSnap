@@ -135,12 +135,12 @@ type RECT struct {
 
 // Window constants
 const (
-	SW_SHOW       = 5
-	SW_HIDE       = 0
-	HWND_TOPMOST  = ^uintptr(0) // -1
-	IDC_CROSS     = 32515
-	IDC_SIZEALL   = 32646
-	SWP_NOSIZE    = 0x0001
-	SWP_NOMOVE    = 0x0002
+	SW_SHOW        = 5
+	SW_HIDE        = 0
+	HWND_TOPMOST   = ^uintptr(0) // -1
+	IDC_CROSS      = 32515
+	IDC_SIZEALL    = 32646
+	SWP_NOSIZE     = 0x0001
+	SWP_NOMOVE     = 0x0002
 	SWP_SHOWWINDOW = 0x0040
 )

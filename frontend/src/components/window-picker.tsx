@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { WindowInfo, WindowInfoWithThumbnail } from '../types';
 import { GetWindowListWithThumbnails } from '../../wailsjs/go/main/App';
 import { X, Search, AppWindow, ChevronRight, RefreshCw } from 'lucide-react';
+import { Tooltip } from './tooltip';
+import { useT } from '../i18n';
 
 interface WindowPickerProps {
   isOpen: boolean;
@@ -10,6 +12,7 @@ interface WindowPickerProps {
 }
 
 export function WindowPicker({ isOpen, onClose, onSelect }: WindowPickerProps) {
+  const t = useT();
   const [windows, setWindows] = useState<WindowInfoWithThumbnail[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,7 +49,7 @@ export function WindowPicker({ isOpen, onClose, onSelect }: WindowPickerProps) {
       <div className="glass-card rounded-2xl w-[700px] max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gradient">Select Window</h2>
+          <h2 className="text-lg font-bold text-gradient">{t('picker.title')}</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all duration-200"
@@ -61,7 +64,7 @@ export function WindowPicker({ isOpen, onClose, onSelect }: WindowPickerProps) {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search windows..."
+              placeholder={t('picker.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-2.5 bg-white/5 text-white rounded-xl border border-white/10
@@ -80,12 +83,12 @@ export function WindowPicker({ isOpen, onClose, onSelect }: WindowPickerProps) {
                   <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
                   <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" style={{ animationDelay: '0.4s' }} />
                 </div>
-                <span>Loading windows with previews...</span>
+                <span>{t('picker.loading')}</span>
               </div>
             </div>
           ) : filteredWindows.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-slate-400">
-              No windows found
+              {t('picker.none')}
             </div>
           ) : (
             <div className="space-y-2">
@@ -129,16 +132,18 @@ export function WindowPicker({ isOpen, onClose, onSelect }: WindowPickerProps) {
 
         {/* Footer */}
         <div className="p-4 border-t border-white/10 flex justify-between items-center">
-          <button
-            onClick={loadWindows}
-            disabled={isLoading}
-            className="text-slate-400 hover:text-violet-400 transition-all duration-200 text-sm flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <Tooltip text={t('tip.picker.refresh')}>
+            <button
+              onClick={loadWindows}
+              disabled={isLoading}
+              className="text-slate-400 hover:text-violet-400 transition-all duration-200 text-sm flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {t('picker.refresh')}
+            </button>
+          </Tooltip>
           <span className="text-sm text-slate-400">
-            <span className="text-violet-400 font-medium">{filteredWindows.length}</span> windows
+            <span className="text-violet-400 font-medium">{t('picker.count', { n: filteredWindows.length })}</span>
           </span>
         </div>
       </div>

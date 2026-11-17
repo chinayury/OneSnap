@@ -39,7 +39,7 @@ type App struct {
 	config           *config.Config
 	lastWidth        int
 	lastHeight       int
-	preCaptureWidth  int  // Window size before capture (protected from resize events)
+	preCaptureWidth  int // Window size before capture (protected from resize events)
 	preCaptureHeight int
 	preCaptureX      int  // Window X position before capture
 	preCaptureY      int  // Window Y position before capture
@@ -81,6 +81,7 @@ func (a *App) startup(ctx context.Context) {
 	// Initialize system tray with version in tooltip
 	a.trayIcon = tray.NewTrayIcon(fmt.Sprintf("OneSnap v%s", Version))
 	a.trayIcon.SetCallback(a.onTrayMenu)
+	a.trayIcon.SetLanguage(a.config.Language)
 	a.trayIcon.SetOnShow(func() {
 		runtime.WindowShow(a.ctx)
 		a.isWindowHidden = false
@@ -148,6 +149,17 @@ func (a *App) onTrayMenu(menuID int) {
 		a.isWindowHidden = false
 		// Emit event to open library window
 		runtime.EventsEmit(a.ctx, "tray:library")
+	case tray.MenuLanguage:
+		newLang := "en"
+		if a.config.Language == "en" {
+			newLang = "zh"
+		}
+		a.config.Language = newLang
+		_ = a.config.Save()
+		if a.trayIcon != nil {
+			a.trayIcon.SetLanguage(newLang)
+		}
+		runtime.EventsEmit(a.ctx, "lang:changed", newLang)
 	case tray.MenuQuit:
 		// Quit the application - use goroutine to avoid blocking tray menu
 		go func() {
@@ -194,8 +206,8 @@ func (a *App) OnBeforeClose(ctx context.Context) bool {
 
 // VirtualScreenBounds represents the combined bounds of all monitors
 type VirtualScreenBounds struct {
-	X      int `json:"x"`      // Can be negative (monitor left of primary)
-	Y      int `json:"y"`      // Can be negative (monitor above primary)
+	X      int `json:"x"` // Can be negative (monitor left of primary)
+	Y      int `json:"y"` // Can be negative (monitor above primary)
 	Width  int `json:"width"`
 	Height int `json:"height"`
 }
@@ -263,7 +275,7 @@ func (a *App) PrepareRegionCapture() (*RegionCaptureData, error) {
 
 	// Show native overlay and get result channel
 	bounds := image.Rect(screenX, screenY, screenX+virtualWidth, screenY+virtualHeight)
-	resultCh := a.overlayManager.Show(rgbaImg, bounds, scaleRatio)
+	resultCh := a.overlayManager.Show(rgbaImg, bounds, scaleRatio, a.config.Language)
 
 	// Wait for selection result in goroutine
 	go func() {
@@ -630,6 +642,18 @@ func (a *App) SaveConfig(cfg *config.Config) error {
 	}
 
 	return nil
+}
+
+// SaveLanguage persists the UI language ("zh" or "en") and syncs the tray menu
+func (a *App) SaveLanguage(language string) error {
+	if language != "zh" && language != "en" {
+		return fmt.Errorf("unsupported language: %s", language)
+	}
+	a.config.Language = language
+	if a.trayIcon != nil {
+		a.trayIcon.SetLanguage(language)
+	}
+	return a.config.Save()
 }
 
 // SelectFolder opens a folder selection dialog
