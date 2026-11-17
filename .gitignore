@@ -36,3 +36,4 @@ temp/
 
 # Local AI assistant files
 .claude/
+frontend/package.json.md5
