@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify tag matches package.json version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = "${{ github.ref_name }}" -replace '^v', ''
+          if ($tag -ne $version) {
+            throw "tag (${{ github.ref_name }}) does not match package.json version ($version)"
+          }
+          Write-Output "Version: $version"
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
+
+      - name: Build
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          wails build -clean -ldflags "-X main.Version=v$version"
+
+      - name: Package
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'build/bin/OneSnap.exe')) { throw 'OneSnap.exe not produced' }
+          Compress-Archive -Path 'build/bin/OneSnap.exe' -DestinationPath "OneSnap-$env:VERSION-Windows-x64.zip" -Force
+          Get-Item "OneSnap-$env:VERSION-Windows-x64.zip" | Select-Object Name, Length
+
+      - name: Remove old release assets
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Keep release records, drop their old asset packages (only latest package is kept)
+          $releases = gh api "repos/${{ github.repository }}/releases" --paginate | ConvertFrom-Json
+          foreach ($rel in $releases) {
+            foreach ($asset in $rel.assets) {
+              Write-Output "Deleting old asset: $($asset.name)"
+              gh api -X DELETE "repos/${{ github.repository }}/releases/assets/$($asset.id)" | Out-Null
+            }
+          }
+
+      - name: Create release and upload asset
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" "OneSnap-$env:VERSION-Windows-x64.zip" --title "${{ github.ref_name }}" --generate-notes

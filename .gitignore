@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Build outputs
+build/bin/
+dist/
+out/
+*.exe
+*.dll
+
+# Go
+*.test
+*.out
+coverage.*
+coverage.out
+
+# Env / IDE
+.env
+.env.*
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Local AI assistant files
+.claude/

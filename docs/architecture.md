@@ -1,0 +1,61 @@
+# 架构说明
+
+OneSnap 是一个 Wails v2 桌面应用：**Go 原生后端 + React WebView 前端**，
+两者通过 Wails 绑定（方法调用）与事件总线通信。
+
+## 运行时结构
+
+```
+┌───────────────────────────── Windows 进程 ─────────────────────────────┐
+│                                                                        │
+│  Go 后端（单实例）                    WebView2（React 编辑器）          │
+│  ┌──────────────────────┐            ┌──────────────────────────┐      │
+│  │ hotkeys  全局热键     │  Events    │ App.tsx  状态与捕获流程   │      │
+│  │ overlay  原生选区层   │ ─────────► │ EditorCanvas (Konva)     │      │
+│  │ screenshot 捕获/剪贴板│ ◄───────── │ AnnotationShapes 标注    │      │
+│  │ tray     托盘         │  Bind 调用 │ Toolbars / Settings      │      │
+│  │ config   配置/自启    │            │ Library / UpdateModal    │      │
+│  │ library  截图库       │            └──────────────────────────┘      │
+│  │ updater  更新检查     │                                              │
+│  └──────────────────────┘                                              │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+## 核心流程：区域截图
+
+1. 热键触发 → Go 发出 `hotkey:region` 事件 → 前端调用 `PrepareRegionCapture`；
+2. Go 隐藏主窗口，捕获整个虚拟桌面原始 RGBA（不编码 PNG，省时间）；
+3. `overlay.Manager` 在独立线程创建 Win32 分层窗口（`WS_EX_LAYERED` +
+   `UpdateLayeredWindow`），把截图绘制为背景并叠加 50% 暗化遮罩；
+4. 用户拖选（支持空格移动），选区经 `scaleRatio` 换算为物理像素后直接
+   在 Go 侧裁剪并编码 PNG，经 `region:selected` 事件回传前端；
+5. 前端进入编辑器，自动复制（若启用）。
+
+选区层提示文字用 GDI 真字体渲染（Microsoft YaHei UI，按 DPI 缩放）：
+GDI 会破坏 32bpp DIB 的 alpha 通道，所以先把字形渲染到独立小 DIB，
+再按灰度覆盖率混合回主像素缓冲（预乘 alpha）。
+
+## 编辑器与标注
+
+- 所有标注是不可变数据（`Annotation` 数组），通过 undo/redo 快照栈管理；
+- 形状渲染在 `annotation-shapes.tsx`，选区/缩放用 Konva Transformer；
+- **马赛克/模糊**：对整张截图预生成像素化/模糊画布（display 尺寸坐标），
+  标注形状以 `clipFunc` 裁剪显示，拖动时实时同步保证像素对位；
+- 裁剪是快照式：保留原图与标注，可反复重裁、还原；
+- 导出走 `stage.toDataURL/toCanvas`（隐藏 Transformer，1:1 像素比）。
+
+## 配置与存储
+
+- 配置文件：`%APPDATA%\OneSnap\config.json`（JSON，写盘前合并，
+  设置弹窗只管理热键/启动/快存/导出/更新检查五组，避免误清其它设置）；
+- 快速保存默认目录：`图片\OneSnap`，命名模式 timestamp/date/increment；
+- 开机自启：`HKCU\...\CurrentVersion\Run`，每次启动若启用则同步 exe 路径；
+- 更新检查：GitHub Releases 最新版 semver 比较，可跳过指定版本。
+
+## 构建版本号
+
+版本号单一来源为根目录 `package.json` 的 `version` 字段：
+
+- 前端经 `vite.config.ts` 的 `__APP_VERSION__` 注入（界面显示、更新检查）；
+- 后端由 CI 以 `wails build -ldflags "-X main.Version=v<version>"` 注入；
+- 发布 tag 必须与 `package.json` 版本一致（release 工作流强制校验）。
