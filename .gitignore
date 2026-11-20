@@ -7,6 +7,7 @@ frontend/dist/
 build/bin/
 dist/
 out/
+release/
 *.exe
 *.dll
 

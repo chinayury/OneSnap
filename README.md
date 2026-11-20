@@ -1,5 +1,7 @@
 # OneSnap
 
+[![CI](https://github.com/chinayury/OneSnap/actions/workflows/ci.yml/badge.svg)](https://github.com/chinayury/OneSnap/actions/workflows/ci.yml)
+
 一键截图 · 标注 · 保存工具（Windows 桌面应用）。
 
 按下快捷键，框选屏幕任意区域，立刻进入编辑器：加箭头、写文字、打序号、
