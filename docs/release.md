@@ -12,7 +12,7 @@
 
 ## 工作流步骤
 
-1. Windows runner 检出代码，安装 Go 1.24 / Node 22 / Wails CLI v2.11.0；
+1. Windows runner 检出代码，安装 Go 1.26 / Node 22 / Wails CLI v2.17.1；
 2. 校验 tag 与 `package.json` 版本一致；
 3. `wails build -ldflags "-X main.Version=v<version>" -clean` 产出 `build/bin/OneSnap.exe`；
 4. 打包 `OneSnap-<version>-Windows-x64.zip`；

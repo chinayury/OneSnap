@@ -80,7 +80,7 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	// Initialize system tray with version in tooltip
-	a.trayIcon = tray.NewTrayIcon(fmt.Sprintf("OneSnap v%s", Version))
+	a.trayIcon = tray.NewTrayIcon("OneSnap " + Version)
 	a.trayIcon.SetCallback(a.onTrayMenu)
 	a.trayIcon.SetLanguage(a.config.Language)
 	a.trayIcon.SetOnShow(func() {
