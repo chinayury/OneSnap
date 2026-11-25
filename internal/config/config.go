@@ -15,10 +15,11 @@ type HotkeyConfig struct {
 
 // StartupConfig holds startup-related settings
 type StartupConfig struct {
-	LaunchOnStartup  bool `json:"launchOnStartup"`
-	MinimizeToTray   bool `json:"minimizeToTray"`
-	ShowNotification bool `json:"showNotification"`
-	CloseToTray      bool `json:"closeToTray"`
+	LaunchOnStartup  bool   `json:"launchOnStartup"`
+	MinimizeToTray   bool   `json:"minimizeToTray"`
+	ShowNotification bool   `json:"showNotification"`
+	CloseToTray      bool   `json:"closeToTray"`
+	CaptureMode      string `json:"captureMode"` // "editor" (default) or "quicksave"
 }
 
 // UpdateConfig holds update-related settings
@@ -95,6 +96,7 @@ func Default() *Config {
 			MinimizeToTray:   false,
 			ShowNotification: true,
 			CloseToTray:      true,
+			CaptureMode:      "editor",
 		},
 		QuickSave: QuickSaveConfig{
 			Folder:  defaultFolder,

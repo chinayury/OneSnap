@@ -450,6 +450,40 @@ func (t *TrayIcon) SetTooltip(tooltip string) {
 	}
 }
 
+// ShowBalloon displays a balloon notification from the tray icon
+// (used by quick-save mode to report the saved path without opening a window).
+func (t *TrayIcon) ShowBalloon(title, text string) {
+	if !t.visible {
+		return
+	}
+
+	// Fill the balloon fields (bounded by the fixed struct sizes)
+	title16 := syscall.StringToUTF16(title)
+	for i := range t.nid.SzInfoTitle {
+		if i < len(title16) {
+			t.nid.SzInfoTitle[i] = title16[i]
+		} else {
+			t.nid.SzInfoTitle[i] = 0
+		}
+	}
+	text16 := syscall.StringToUTF16(text)
+	for i := range t.nid.SzInfo {
+		if i < len(text16) {
+			t.nid.SzInfo[i] = text16[i]
+		} else {
+			t.nid.SzInfo[i] = 0
+		}
+	}
+	t.nid.DwInfoFlags = 0x1 // NIIF_INFO
+
+	// Show the balloon, then clear the flag so later NIM_MODIFY calls
+	// (tooltip updates etc.) do not re-trigger it
+	savedFlags := t.nid.UFlags
+	t.nid.UFlags = savedFlags | NIF_INFO
+	procShell_NotifyIconW.Call(NIM_MODIFY, uintptr(unsafe.Pointer(&t.nid)))
+	t.nid.UFlags = savedFlags
+}
+
 // Stop removes the tray icon and stops the message loop
 func (t *TrayIcon) Stop() error {
 	if t.running {

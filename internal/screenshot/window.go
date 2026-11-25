@@ -21,6 +21,7 @@ var (
 	procShowWindow             = user32Win.NewProc("ShowWindow")
 	procIsIconic               = user32Win.NewProc("IsIconic")
 	procGetCursorPos           = user32Win.NewProc("GetCursorPos")
+	procGetForegroundWindow    = user32Win.NewProc("GetForegroundWindow")
 )
 
 const (
@@ -112,6 +113,12 @@ func GetCursorPosition() (x, y int) {
 	var pt POINT
 	procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
 	return int(pt.X), int(pt.Y)
+}
+
+// GetForegroundWindow returns the handle of the current foreground window.
+func GetForegroundWindow() uintptr {
+	hwnd, _, _ := procGetForegroundWindow.Call()
+	return hwnd
 }
 
 // GetMonitorAtCursor returns the display index where the cursor is currently located

@@ -105,6 +105,7 @@ export namespace config {
 	    minimizeToTray: boolean;
 	    showNotification: boolean;
 	    closeToTray: boolean;
+	    captureMode: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new StartupConfig(source);
@@ -116,6 +117,7 @@ export namespace config {
 	        this.minimizeToTray = source["minimizeToTray"];
 	        this.showNotification = source["showNotification"];
 	        this.closeToTray = source["closeToTray"];
+	        this.captureMode = source["captureMode"];
 	    }
 	}
 	export class HotkeyConfig {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"image"
 	"image/gif"
@@ -126,12 +127,157 @@ func (a *App) shutdown(ctx context.Context) {
 func (a *App) onHotkey(id int) {
 	switch id {
 	case hotkeys.HotkeyFullscreen:
+		// Quick-save mode: capture and save silently, no editor window
+		if a.config.Startup.CaptureMode == "quicksave" {
+			go a.quickSaveFullscreen()
+			return
+		}
 		runtime.EventsEmit(a.ctx, "hotkey:fullscreen")
 	case hotkeys.HotkeyRegion:
 		runtime.EventsEmit(a.ctx, "hotkey:region")
 	case hotkeys.HotkeyWindow:
+		// Quick-save mode: capture the foreground window silently
+		if a.config.Startup.CaptureMode == "quicksave" {
+			go a.quickSaveForegroundWindow()
+			return
+		}
 		runtime.EventsEmit(a.ctx, "hotkey:window")
 	}
+}
+
+// quickSaveFullscreen captures the display under the cursor and saves it
+// without opening the editor window (quick-save mode).
+func (a *App) quickSaveFullscreen() {
+	result, err := screenshot.CaptureFullscreen()
+	if err != nil {
+		a.notifyQuickSaveFailure(err)
+		return
+	}
+	data, err := base64.StdEncoding.DecodeString(result.Data)
+	if err != nil {
+		a.notifyQuickSaveFailure(err)
+		return
+	}
+	a.saveAndNotify(data, ".png")
+}
+
+// quickSaveForegroundWindow captures the current foreground window and
+// saves it without opening the editor window (quick-save mode).
+func (a *App) quickSaveForegroundWindow() {
+	result, err := screenshot.CaptureWindowByCoords(screenshot.GetForegroundWindow())
+	if err != nil || result == nil {
+		if err == nil {
+			err = errors.New("failed to capture window")
+		}
+		a.notifyQuickSaveFailure(err)
+		return
+	}
+	data, err := base64.StdEncoding.DecodeString(result.Data)
+	if err != nil {
+		a.notifyQuickSaveFailure(err)
+		return
+	}
+	a.saveAndNotify(data, ".png")
+}
+
+// saveAndNotify writes image bytes to the quick-save folder and shows a
+// localized tray balloon with the saved path (or the failure reason).
+func (a *App) saveAndNotify(data []byte, ext string) {
+	filePath, err := a.quickSaveFile(data, ext)
+	if a.trayIcon == nil {
+		return
+	}
+	if err != nil {
+		a.trayIcon.ShowBalloon("OneSnap", a.quickSaveFailText(err))
+		return
+	}
+	a.trayIcon.ShowBalloon("OneSnap", a.quickSaveSavedText(filePath))
+}
+
+func (a *App) notifyQuickSaveFailure(err error) {
+	if a.trayIcon != nil {
+		a.trayIcon.ShowBalloon("OneSnap", a.quickSaveFailText(err))
+	}
+}
+
+// quickSaveSavedText / quickSaveFailText return localized balloon texts.
+func (a *App) quickSaveSavedText(path string) string {
+	if a.config.Language == "en" {
+		return "Saved: " + path
+	}
+	return "已保存：" + path
+}
+
+func (a *App) quickSaveFailText(err error) string {
+	if a.config.Language == "en" {
+		return "Quick save failed: " + err.Error()
+	}
+	return "快速保存失败：" + err.Error()
+}
+
+// quickSaveFile writes image bytes to the configured quick-save folder using
+// the configured naming pattern. Returns the full file path.
+func (a *App) quickSaveFile(data []byte, ext string) (string, error) {
+	saveDir := a.config.QuickSave.Folder
+	if saveDir == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to get home directory: %w", err)
+		}
+		saveDir = filepath.Join(homeDir, "Pictures", "OneSnap")
+	}
+
+	// Create save directory if it doesn't exist
+	if err := os.MkdirAll(saveDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create save directory: %w", err)
+	}
+
+	// Generate filename based on configured pattern
+	var filename string
+	now := time.Now()
+	pattern := a.config.QuickSave.Pattern
+	if pattern == "" {
+		pattern = "timestamp"
+	}
+
+	switch pattern {
+	case "date":
+		// Date only: onesnap_2024-01-15.png
+		filename = "onesnap_" + now.Format("2006-01-02") + ext
+		// Avoid overwriting: append counter if file exists
+		filePath := filepath.Join(saveDir, filename)
+		if _, err := os.Stat(filePath); err == nil {
+			counter := 1
+			for {
+				filename = "onesnap_" + now.Format("2006-01-02") + "_" + fmt.Sprintf("%d", counter) + ext
+				filePath = filepath.Join(saveDir, filename)
+				if _, err := os.Stat(filePath); os.IsNotExist(err) {
+					break
+				}
+				counter++
+			}
+		}
+	case "increment":
+		// Incremental: onesnap_001.png, onesnap_002.png
+		counter := 1
+		for {
+			filename = fmt.Sprintf("onesnap_%03d%s", counter, ext)
+			filePath := filepath.Join(saveDir, filename)
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				break
+			}
+			counter++
+		}
+	default: // "timestamp"
+		// Full timestamp: onesnap_2024-01-15_14-30-45.png
+		filename = "onesnap_" + now.Format("2006-01-02_15-04-05") + ext
+	}
+
+	filePath := filepath.Join(saveDir, filename)
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		return "", fmt.Errorf("failed to save file: %w", err)
+	}
+	return filePath, nil
 }
 
 // onTrayMenu handles tray menu selections
@@ -249,6 +395,8 @@ func (a *App) PrepareRegionCapture() (*RegionCaptureData, error) {
 	}
 
 	// Only hide and wait if window is currently visible
+	wasVisible := !a.isWindowHidden
+	quickSave := a.config.Startup.CaptureMode == "quicksave"
 	if !a.isWindowHidden {
 		runtime.WindowHide(a.ctx)
 		a.isWindowHidden = true
@@ -281,9 +429,11 @@ func (a *App) PrepareRegionCapture() (*RegionCaptureData, error) {
 	go func() {
 		selResult := <-resultCh
 		if selResult.Cancelled {
-			// User cancelled - just show window
-			runtime.WindowShow(a.ctx)
-			a.isWindowHidden = false
+			// User cancelled - restore window only if it was visible before capture
+			if wasVisible {
+				runtime.WindowShow(a.ctx)
+				a.isWindowHidden = false
+			}
 			a.isCapturing = false
 			return
 		}
@@ -299,8 +449,22 @@ func (a *App) PrepareRegionCapture() (*RegionCaptureData, error) {
 
 		var buf bytes.Buffer
 		if err := png.Encode(&buf, croppedImg); err != nil {
-			runtime.WindowShow(a.ctx)
-			a.isWindowHidden = false
+			if wasVisible {
+				runtime.WindowShow(a.ctx)
+				a.isWindowHidden = false
+			}
+			a.isCapturing = false
+			return
+		}
+
+		if quickSave {
+			// Quick-save mode: save silently with a tray balloon, no editor window
+			a.saveAndNotify(buf.Bytes(), ".png")
+			// Restore the window only if it was visible before the capture
+			if wasVisible {
+				runtime.WindowShow(a.ctx)
+				a.isWindowHidden = false
+			}
 			a.isCapturing = false
 			return
 		}
@@ -498,83 +662,22 @@ func (a *App) SaveImage(imageData string, format string) SaveImageResult {
 
 // QuickSave saves a base64 encoded image to the configured directory
 func (a *App) QuickSave(imageData string, format string) SaveImageResult {
-	// Get save directory from config (fallback to default)
-	saveDir := a.config.QuickSave.Folder
-	if saveDir == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return SaveImageResult{Success: false, Error: "Failed to get home directory: " + err.Error()}
-		}
-		saveDir = filepath.Join(homeDir, "Pictures", "OneSnap")
-	}
-
-	// Create save directory if it doesn't exist
-	err := os.MkdirAll(saveDir, 0755)
-	if err != nil {
-		return SaveImageResult{Success: false, Error: "Failed to create save directory: " + err.Error()}
-	}
-
 	// Determine file extension
-	var ext string
+	ext := ".png"
 	switch strings.ToLower(format) {
 	case "jpeg", "jpg":
 		ext = ".jpg"
-	default:
-		ext = ".png"
 	}
 
-	// Generate filename based on configured pattern
-	var filename string
-	now := time.Now()
-	pattern := a.config.QuickSave.Pattern
-	if pattern == "" {
-		pattern = "timestamp"
-	}
-
-	switch pattern {
-	case "date":
-		// Date only: onesnap_2024-01-15.png
-		filename = "onesnap_" + now.Format("2006-01-02") + ext
-		// Avoid overwriting: append counter if file exists
-		filePath := filepath.Join(saveDir, filename)
-		if _, err := os.Stat(filePath); err == nil {
-			counter := 1
-			for {
-				filename = "onesnap_" + now.Format("2006-01-02") + "_" + fmt.Sprintf("%d", counter) + ext
-				filePath = filepath.Join(saveDir, filename)
-				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					break
-				}
-				counter++
-			}
-		}
-	case "increment":
-		// Incremental: onesnap_001.png, onesnap_002.png
-		counter := 1
-		for {
-			filename = fmt.Sprintf("onesnap_%03d%s", counter, ext)
-			filePath := filepath.Join(saveDir, filename)
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				break
-			}
-			counter++
-		}
-	default: // "timestamp"
-		// Full timestamp: onesnap_2024-01-15_14-30-45.png
-		filename = "onesnap_" + now.Format("2006-01-02_15-04-05") + ext
-	}
-
-	filePath := filepath.Join(saveDir, filename)
-
-	// Decode and save
+	// Decode base64 data
 	data, err := base64.StdEncoding.DecodeString(imageData)
 	if err != nil {
 		return SaveImageResult{Success: false, Error: "Failed to decode image data: " + err.Error()}
 	}
 
-	err = os.WriteFile(filePath, data, 0644)
+	filePath, err := a.quickSaveFile(data, ext)
 	if err != nil {
-		return SaveImageResult{Success: false, Error: "Failed to save file: " + err.Error()}
+		return SaveImageResult{Success: false, Error: err.Error()}
 	}
 
 	return SaveImageResult{Success: true, FilePath: filePath}

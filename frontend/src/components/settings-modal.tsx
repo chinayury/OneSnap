@@ -32,6 +32,7 @@ interface LocalConfig {
     minimizeToTray: boolean;
     showNotification: boolean;
     closeToTray: boolean;
+    captureMode: string; // "editor" | "quicksave"
   };
   quickSave: {
     folder: string;
@@ -59,6 +60,7 @@ const defaultConfig: LocalConfig = {
     minimizeToTray: false,
     showNotification: true,
     closeToTray: true,
+    captureMode: 'editor',
   },
   quickSave: {
     folder: '',
@@ -104,6 +106,7 @@ export function SettingsModal({ isOpen, onClose, lang, onLanguageChange }: Setti
           minimizeToTray: cfg.startup?.minimizeToTray || false,
           showNotification: cfg.startup?.showNotification ?? true,
           closeToTray: cfg.startup?.closeToTray ?? true,
+          captureMode: cfg.startup?.captureMode === 'quicksave' ? 'quicksave' : 'editor',
         },
         quickSave: {
           folder: cfg.quickSave?.folder || '',
@@ -290,6 +293,44 @@ export function SettingsModal({ isOpen, onClose, lang, onLanguageChange }: Setti
 
           {activeTab === 'startup' && (
             <div className="space-y-4">
+              {/* Capture mode: editor popup vs quick save */}
+              <div>
+                <label className="block text-sm text-slate-300 font-medium mb-2">{t('settings.startup.capturemode')}</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() =>
+                      setLocalConfig((prev) => ({
+                        ...prev,
+                        startup: { ...prev.startup, captureMode: 'editor' },
+                      }))
+                    }
+                    className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                      localConfig.startup.captureMode === 'editor'
+                        ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
+                        : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10'
+                    }`}
+                  >
+                    {t('settings.capturemode.editor')}
+                  </button>
+                  <button
+                    onClick={() =>
+                      setLocalConfig((prev) => ({
+                        ...prev,
+                        startup: { ...prev.startup, captureMode: 'quicksave' },
+                      }))
+                    }
+                    className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                      localConfig.startup.captureMode === 'quicksave'
+                        ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
+                        : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10'
+                    }`}
+                  >
+                    {t('settings.capturemode.quicksave')}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">{t('settings.startup.capturemode.hint')}</p>
+              </div>
+
               <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg bg-white/5 hover:bg-white/8 border border-white/5 transition-all duration-200">
                 <input
                   type="checkbox"
