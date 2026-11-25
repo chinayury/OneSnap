@@ -232,52 +232,36 @@ func (a *App) quickSaveFile(data []byte, ext string) (string, error) {
 		return "", fmt.Errorf("failed to create save directory: %w", err)
 	}
 
-	// Generate filename based on configured pattern
-	var filename string
 	now := time.Now()
 	pattern := a.config.QuickSave.Pattern
-	if pattern == "" {
-		pattern = "timestamp"
+	stem := "onesnap_" + now.Format("2006-01-02_15-04-05")
+	if pattern == "date" {
+		stem = "onesnap_" + now.Format("2006-01-02")
 	}
 
-	switch pattern {
-	case "date":
-		// Date only: onesnap_2024-01-15.png
-		filename = "onesnap_" + now.Format("2006-01-02") + ext
-		// Avoid overwriting: append counter if file exists
-		filePath := filepath.Join(saveDir, filename)
-		if _, err := os.Stat(filePath); err == nil {
-			counter := 1
-			for {
-				filename = "onesnap_" + now.Format("2006-01-02") + "_" + fmt.Sprintf("%d", counter) + ext
-				filePath = filepath.Join(saveDir, filename)
-				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					break
-				}
-				counter++
-			}
+	for index := 0; ; index++ {
+		name := stem
+		if pattern == "increment" {
+			name = fmt.Sprintf("onesnap_%03d", index+1)
+		} else if index > 0 {
+			name = fmt.Sprintf("%s_%d", stem, index)
 		}
-	case "increment":
-		// Incremental: onesnap_001.png, onesnap_002.png
-		counter := 1
-		for {
-			filename = fmt.Sprintf("onesnap_%03d%s", counter, ext)
-			filePath := filepath.Join(saveDir, filename)
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				break
-			}
-			counter++
+		filePath := filepath.Join(saveDir, name+ext)
+		file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+		if os.IsExist(err) {
+			continue
 		}
-	default: // "timestamp"
-		// Full timestamp: onesnap_2024-01-15_14-30-45.png
-		filename = "onesnap_" + now.Format("2006-01-02_15-04-05") + ext
+		if err != nil {
+			return "", fmt.Errorf("failed to create screenshot: %w", err)
+		}
+		_, writeErr := file.Write(data)
+		closeErr := file.Close()
+		if err := errors.Join(writeErr, closeErr); err != nil {
+			os.Remove(filePath)
+			return "", fmt.Errorf("failed to save file: %w", err)
+		}
+		return filePath, nil
 	}
-
-	filePath := filepath.Join(saveDir, filename)
-	if err := os.WriteFile(filePath, data, 0644); err != nil {
-		return "", fmt.Errorf("failed to save file: %w", err)
-	}
-	return filePath, nil
 }
 
 // onTrayMenu handles tray menu selections

@@ -48,9 +48,13 @@ GDI 会破坏 32bpp DIB 的 alpha 通道，所以先把字形渲染到独立小 
 
 - 配置文件：`%APPDATA%\OneSnap\config.json`（JSON，写盘前合并，
   设置弹窗只管理热键/启动/快存/导出/更新检查五组，避免误清其它设置）；
-- 快速保存默认目录：`图片\OneSnap`，命名模式 timestamp/date/increment；
+- 快速保存默认目录：`图片\OneSnap`，命名模式 timestamp/date/increment。手动与热键保存共用独占创建逻辑：时间戳和日期重名时追加数字后缀，递增模式使用下一个可用编号；
 - 开机自启：`HKCU\...\CurrentVersion\Run`，每次启动若启用则同步 exe 路径；
 - 更新检查：GitHub Releases 最新版 semver 比较，可跳过指定版本。
+
+### 截图后动作的取舍
+
+[WinShot](https://github.com/mrgoonie/winshot) 的标注和导出流程已由编辑器覆盖。[Flameshot](https://github.com/flameshot-org/flameshot) 支持直接保存和复制，OneSnap 的静默保存和编辑器导出共用保存逻辑，两处均需保留同名旧图。[ShareX](https://github.com/ShareX/ShareX) 支持上传到外部服务，OneSnap 的快速保存保持本地写盘，无需配置账户。
 
 ## 构建版本号
 
