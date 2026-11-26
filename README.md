@@ -73,7 +73,7 @@
 
 ## 从源码构建
 
-依赖：Go 1.24+、Node.js 18+、[Wails CLI v2](https://wails.io/docs/gettingstarted/installation)、WebView2 Runtime（Win11 自带）。
+依赖：Go 1.26+、Node.js 22.12+（与 CI 的 Node 22 系列一致）、[Wails CLI v2](https://wails.io/docs/gettingstarted/installation)、WebView2 Runtime（Win11 自带）。
 
 ```bash
 git clone https://github.com/chinayury/OneSnap.git

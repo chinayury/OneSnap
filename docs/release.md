@@ -16,8 +16,8 @@
 2. 校验 tag 与 `package.json` 版本一致；
 3. `wails build -ldflags "-X main.Version=v<version>" -clean` 产出 `build/bin/OneSnap.exe`；
 4. 打包 `OneSnap-<version>-Windows-x64.zip`；
-5. 删除所有历史 Release 附件（保留 Release 记录本身）；
-6. 上传当前附件并按 tag 生成 Release Notes。
+5. 上传当前安装包并按 tag 生成 Release Notes；
+6. 核对 GitHub 附件摘要与本地 ZIP 的 SHA-256，成功后清理更低版本的附件，保留历史 Release 记录。
 
 ## 发布后检查
 
