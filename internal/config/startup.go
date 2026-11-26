@@ -16,7 +16,14 @@ const (
 
 // IsStartupEnabled checks if the app is set to run on Windows startup
 func IsStartupEnabled() (bool, error) {
-	key, err := registry.OpenKey(registry.CURRENT_USER, startupKeyPath, registry.QUERY_VALUE)
+	return isStartupEnabled(startupKeyPath)
+}
+
+func isStartupEnabled(path string) (bool, error) {
+	key, err := registry.OpenKey(registry.CURRENT_USER, path, registry.QUERY_VALUE)
+	if err == registry.ErrNotExist {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -36,12 +43,12 @@ func IsStartupEnabled() (bool, error) {
 // SetStartupEnabled enables or disables running the app on Windows startup
 func SetStartupEnabled(enabled bool) error {
 	if enabled {
-		return enableStartup()
+		return enableStartup(startupKeyPath)
 	}
-	return disableStartup()
+	return disableStartup(startupKeyPath)
 }
 
-func enableStartup() error {
+func enableStartup(path string) error {
 	// Get executable path
 	exePath, err := os.Executable()
 	if err != nil {
@@ -58,7 +65,7 @@ func enableStartup() error {
 	// CreateKey instead of OpenKey because the Run key may be missing in
 	// minimal user hives (e.g. CI service sessions); OpenKey would fail
 	// with ERROR_FILE_NOT_FOUND there.
-	key, _, err := registry.CreateKey(registry.CURRENT_USER, startupKeyPath, registry.SET_VALUE|registry.QUERY_VALUE)
+	key, _, err := registry.CreateKey(registry.CURRENT_USER, path, registry.SET_VALUE|registry.QUERY_VALUE)
 	if err != nil {
 		return fmt.Errorf("failed to create registry key: %w", err)
 	}
@@ -91,11 +98,11 @@ func SyncStartupPath() error {
 	// Always enable startup to ensure registry matches config.
 	// If registry already has correct path, this is a no-op.
 	// If registry is missing or has wrong path, this fixes it.
-	return enableStartup()
+	return enableStartup(startupKeyPath)
 }
 
-func disableStartup() error {
-	key, err := registry.OpenKey(registry.CURRENT_USER, startupKeyPath, registry.SET_VALUE)
+func disableStartup(path string) error {
+	key, err := registry.OpenKey(registry.CURRENT_USER, path, registry.SET_VALUE)
 	if err != nil {
 		// If key doesn't exist, autostart is already disabled
 		if err == registry.ErrNotExist {
