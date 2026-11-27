@@ -165,10 +165,7 @@ func (a *App) quickSaveFullscreen() {
 // saves it without opening the editor window (quick-save mode).
 func (a *App) quickSaveForegroundWindow() {
 	result, err := screenshot.CaptureWindowByCoords(screenshot.GetForegroundWindow())
-	if err != nil || result == nil {
-		if err == nil {
-			err = errors.New("failed to capture window")
-		}
+	if err != nil {
 		a.notifyQuickSaveFailure(err)
 		return
 	}

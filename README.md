@@ -125,7 +125,7 @@ OneSnap 基于 WinShot 项目深度改版而来（感谢 [mrgoonie/winshot](http
 - [ ] 贴图（Pin to Screen）：截图钉在桌面置顶显示
 - [ ] 长截图（滚动拼接）
 - [ ] GIF / MP4 录制
-- [ ] 多语言界面
+- [x] 中文和英文界面
 
 ## 许可证
 

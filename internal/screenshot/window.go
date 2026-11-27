@@ -1,6 +1,8 @@
 package screenshot
 
 import (
+	"errors"
+	"fmt"
 	"time"
 	"unsafe"
 
@@ -75,6 +77,7 @@ func CaptureWindowByCoords(hwnd uintptr) (*CaptureResult, error) {
 	bringWindowToForeground(hwnd)
 
 	var rect RECT
+	var haveBounds bool
 
 	// Try DWM extended frame bounds first (more accurate for modern windows)
 	// This accounts for window shadows and DPI scaling
@@ -85,13 +88,13 @@ func CaptureWindowByCoords(hwnd uintptr) (*CaptureResult, error) {
 			uintptr(unsafe.Pointer(&rect)),
 			unsafe.Sizeof(rect),
 		)
-		if ret != 0 {
-			// DWM failed, fall back to GetWindowRect
-			procGetWindowRectSS.Call(hwnd, uintptr(unsafe.Pointer(&rect)))
+		haveBounds = ret == 0
+	}
+	if !haveBounds {
+		ok, _, err := procGetWindowRectSS.Call(hwnd, uintptr(unsafe.Pointer(&rect)))
+		if ok == 0 {
+			return nil, fmt.Errorf("get window bounds: %w", err)
 		}
-	} else {
-		// DWM not available, use GetWindowRect
-		procGetWindowRectSS.Call(hwnd, uintptr(unsafe.Pointer(&rect)))
 	}
 
 	x := int(rect.Left)
@@ -101,7 +104,7 @@ func CaptureWindowByCoords(hwnd uintptr) (*CaptureResult, error) {
 
 	// Ensure valid dimensions
 	if width <= 0 || height <= 0 {
-		return nil, nil
+		return nil, errors.New("window has no visible area to capture")
 	}
 
 	// Capture the screen region at window coordinates

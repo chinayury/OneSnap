@@ -86,17 +86,24 @@ func CheckForUpdate(currentVersion string) (*UpdateInfo, error) {
 		return nil, fmt.Errorf("invalid latest version: %w", err)
 	}
 
-	// Find portable exe download URL
+	// Prefer the Windows ZIP built by the release workflow.
+	packageName := "OneSnap-" + latestVer + "-Windows-x64.zip"
 	downloadURL := ""
 	for _, asset := range release.Assets {
-		name := strings.ToLower(asset.Name)
-		if strings.HasSuffix(name, ".exe") && !strings.Contains(name, "setup") && !strings.Contains(name, "installer") {
+		if asset.BrowserDownloadURL == "" {
+			continue
+		}
+		if strings.EqualFold(asset.Name, packageName) {
 			downloadURL = asset.BrowserDownloadURL
 			break
 		}
+		name := strings.ToLower(asset.Name)
+		if downloadURL == "" && strings.HasSuffix(name, ".exe") && !strings.Contains(name, "setup") && !strings.Contains(name, "installer") {
+			downloadURL = asset.BrowserDownloadURL
+		}
 	}
 
-	// If no portable exe found, use the release page URL
+	// Releases without a compatible attachment can still be opened in the browser.
 	if downloadURL == "" {
 		downloadURL = release.HTMLURL
 	}

@@ -1,6 +1,6 @@
 {
   "name": "onesnap",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "description": "One-click screenshot & annotation tool for Windows (一键截图标注工具)"
 }

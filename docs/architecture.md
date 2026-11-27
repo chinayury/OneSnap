@@ -56,6 +56,8 @@ GDI 会破坏 32bpp DIB 的 alpha 通道，所以先把字形渲染到独立小 
 
 [WinShot](https://github.com/mrgoonie/winshot) 的标注和导出流程已由编辑器覆盖。托盘沿用其显示版本号的做法，直接展示构建时注入的版本字符串。[Flameshot](https://github.com/flameshot-org/flameshot) 支持直接保存和复制，OneSnap 的静默保存和编辑器导出共用保存逻辑，两处均需保留同名旧图。[ShareX](https://github.com/ShareX/ShareX) 支持上传到外部服务，OneSnap 的快速保存保持本地写盘，无需配置账户。
 
+[ksnip](https://github.com/ksnip/ksnip) 支持的像素化和序号命名已由编辑器和快速保存覆盖。[Greenshot](https://github.com/greenshot/greenshot/blob/main/docs/capture-user-guide.md) 和 [ShareX](https://github.com/ShareX/sharex.github.io/blob/master/docs/region-capture.md) 支持复用上次选区。OneSnap 暂缓此项，跨屏复用前需确定显示器断开或 DPI 改变时如何恢复选区。
+
 ## 构建版本号
 
 版本号单一来源为根目录 `package.json` 的 `version` 字段：
