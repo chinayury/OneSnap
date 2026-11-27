@@ -221,6 +221,7 @@ function App() {
   // Export state
   const [isExporting, setIsExporting] = useState(false);
   const [lastSavedPath, setLastSavedPath] = useState<string | null>(null);
+  const editorImageGeneration = useRef(0);
   const [jpegQuality, setJpegQuality] = useState(95);
 
   // Auto-copy state: tracks when a fresh capture needs auto-copy after canvas renders
@@ -411,6 +412,7 @@ function App() {
   }, []);
 
   const replaceEditorImage = useCallback((image: CaptureResult | null, savedPath: string | null = null) => {
+    editorImageGeneration.current++;
     setScreenshot(image);
     resetAnnotations([]);
     setSelectedAnnotationId(null);
@@ -1151,6 +1153,7 @@ function App() {
 
   // Export handlers
   const handleSave = useCallback(async (format: 'png' | 'jpeg') => {
+    const imageGeneration = editorImageGeneration.current;
     const dataUrl = getCanvasDataUrl(format);
     if (!dataUrl) {
       setStatusMessage(t('status.export.no.canvas'));
@@ -1165,6 +1168,9 @@ function App() {
       const result = await SaveImage(base64Data, format);
 
       if (result.success) {
+        if (imageGeneration === editorImageGeneration.current) {
+          setLastSavedPath(result.filePath);
+        }
         setStatusMessage(t('status.saved', { path: result.filePath }));
       } else {
         setStatusMessage(result.error || t('status.save.failed'));
@@ -1179,6 +1185,7 @@ function App() {
   }, [getCanvasDataUrl, t]);
 
   const handleQuickSave = useCallback(async (format: 'png' | 'jpeg') => {
+    const imageGeneration = editorImageGeneration.current;
     const dataUrl = getCanvasDataUrl(format);
     if (!dataUrl) {
       setStatusMessage(t('status.export.no.canvas'));
@@ -1193,7 +1200,9 @@ function App() {
       const result = await QuickSave(base64Data, format);
 
       if (result.success) {
-        setLastSavedPath(result.filePath);
+        if (imageGeneration === editorImageGeneration.current) {
+          setLastSavedPath(result.filePath);
+        }
         // Auto-copy path to clipboard after QuickSave (per user validation)
         try {
           await navigator.clipboard.writeText(result.filePath);
