@@ -58,6 +58,10 @@ GDI 会破坏 32bpp DIB 的 alpha 通道，所以先把字形渲染到独立小 
 
 [ksnip](https://github.com/ksnip/ksnip) 支持的像素化和序号命名已由编辑器和快速保存覆盖。[Greenshot](https://github.com/greenshot/greenshot/blob/main/docs/capture-user-guide.md) 和 [ShareX](https://github.com/ShareX/sharex.github.io/blob/master/docs/region-capture.md) 支持复用上次选区。OneSnap 暂缓此项，跨屏复用前需确定显示器断开或 DPI 改变时如何恢复选区。
 
+### 截图库的加载上限
+
+打开截图库时，OneSnap 先按文件修改时间从新到旧排序，再依次解码缩略图，最多显示 500 张。修改时间相同的图片按文件名排序。遇到损坏或无法读取的图片会继续向后查找，直到填满列表或扫描结束。[ShareX 的图库更新记录](https://getsharex.com/changelog-classic)也介绍了通过限制图片数量来缩短大型图库加载时间的做法。
+
 ## 构建版本号
 
 版本号单一来源为根目录 `package.json` 的 `version` 字段：

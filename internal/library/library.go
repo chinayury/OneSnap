@@ -71,55 +71,41 @@ func ScanFolder(folderPath string, opts ScanOptions) ([]LibraryImage, error) {
 		return nil, fmt.Errorf("failed to read directory: %w", err)
 	}
 
-	var images []LibraryImage
-
+	// ReadDir returns entries in filename order. Keep that order for time ties.
+	var candidates []os.FileInfo
 	for _, entry := range entries {
-		// Skip directories
-		if entry.IsDir() {
+		if entry.IsDir() || !supportedExtensions[strings.ToLower(filepath.Ext(entry.Name()))] {
 			continue
 		}
-
-		// Check file extension
-		ext := strings.ToLower(filepath.Ext(entry.Name()))
-		if !supportedExtensions[ext] {
-			continue
+		info, err := entry.Info()
+		if err == nil {
+			candidates = append(candidates, info)
 		}
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return candidates[i].ModTime().After(candidates[j].ModTime())
+	})
 
-		fullPath := filepath.Join(folderPath, entry.Name())
-
-		// Get file info for modified date
-		fileInfo, err := entry.Info()
-		if err != nil {
-			continue // Skip files we can't stat
-		}
-
-		// Generate thumbnail
+	var images []LibraryImage
+	for _, info := range candidates {
+		fullPath := filepath.Join(folderPath, info.Name())
 		thumb, width, height, err := GenerateThumbnail(fullPath, opts.ThumbnailWidth, opts.ThumbnailHeight)
 		if err != nil {
-			continue // Skip files we can't read/decode
+			continue
 		}
 
 		images = append(images, LibraryImage{
 			Filepath:     fullPath,
-			Filename:     entry.Name(),
-			ModifiedDate: fileInfo.ModTime().Format(time.RFC3339),
+			Filename:     info.Name(),
+			ModifiedDate: info.ModTime().Format(time.RFC3339),
 			Thumbnail:    thumb,
 			Width:        width,
 			Height:       height,
 		})
-
-		// Respect MaxFiles limit
 		if opts.MaxFiles > 0 && len(images) >= opts.MaxFiles {
 			break
 		}
 	}
-
-	// Sort by modified date descending (newest first)
-	sort.Slice(images, func(i, j int) bool {
-		ti, _ := time.Parse(time.RFC3339, images[i].ModifiedDate)
-		tj, _ := time.Parse(time.RFC3339, images[j].ModifiedDate)
-		return ti.After(tj)
-	})
 
 	return images, nil
 }

@@ -55,6 +55,14 @@ const DEFAULT_EDITOR_SETTINGS = {
   borderType: 'center' as BorderType,
 };
 
+const EMPTY_CROP_STATE: CropState = {
+  originalImage: null,
+  croppedImage: null,
+  originalAnnotations: [],
+  lastCropArea: null,
+  isCropApplied: false,
+};
+
 // Helper to parse ratio string into numeric ratio
 function parseRatio(ratio: OutputRatio): number | null {
   if (ratio === 'auto') return null;
@@ -208,14 +216,7 @@ function App() {
   const [cropArea, setCropArea] = useState<CropArea | null>(null);
   const [cropAspectRatio, setCropAspectRatio] = useState<CropAspectRatio>('free');
   const [isDrawingCrop, setIsDrawingCrop] = useState(false);
-  // Snapshot-based crop state
-  const [cropState, setCropState] = useState<CropState>({
-    originalImage: null,
-    croppedImage: null,
-    originalAnnotations: [],
-    lastCropArea: null,
-    isCropApplied: false,
-  });
+  const [cropState, setCropState] = useState<CropState>(EMPTY_CROP_STATE);
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -409,6 +410,18 @@ function App() {
     };
   }, []);
 
+  const replaceEditorImage = useCallback((image: CaptureResult | null, savedPath: string | null = null) => {
+    setScreenshot(image);
+    resetAnnotations([]);
+    setSelectedAnnotationId(null);
+    setActiveTool('select');
+    setCropState(EMPTY_CROP_STATE);
+    setCropArea(null);
+    setCropMode(false);
+    setIsDrawingCrop(false);
+    setLastSavedPath(savedPath);
+  }, [resetAnnotations]);
+
   const handleCapture = useCallback(async (mode: CaptureMode) => {
     if (mode === 'window') {
       setShowWindowPicker(true);
@@ -440,13 +453,7 @@ function App() {
         throw new Error('Invalid capture mode');
       }
 
-      setScreenshot(result);
-      // Reset annotations for new capture (clears history)
-      resetAnnotations([]);
-      setSelectedAnnotationId(null);
-      setActiveTool('select');
-      // Clear last saved path since this is a new capture
-      setLastSavedPath(null);
+      replaceEditorImage(result);
       // Show capture success notification
       setStatusMessage(t('status.fullscreen.captured'));
       setTimeout(() => setStatusMessage(undefined), 2000);
@@ -460,7 +467,7 @@ function App() {
     }
 
     setIsCapturing(false);
-  }, [resetAnnotations, t]);
+  }, [replaceEditorImage, t]);
 
   const handleWindowSelect = async (window: WindowInfo) => {
     setShowWindowPicker(false);
@@ -469,13 +476,7 @@ function App() {
 
     try {
       const result = await CaptureWindow(window.handle) as CaptureResult;
-      setScreenshot(result);
-      // Reset annotations for new capture (clears history)
-      resetAnnotations([]);
-      setSelectedAnnotationId(null);
-      setActiveTool('select');
-      // Clear last saved path since this is a new capture
-      setLastSavedPath(null);
+      replaceEditorImage(result);
       // Show capture success notification
       setStatusMessage(t('status.window.captured'));
       setTimeout(() => setStatusMessage(undefined), 2000);
@@ -493,15 +494,7 @@ function App() {
 
   // Handle native overlay selection result (already cropped by backend)
   const handleNativeRegionSelect = useCallback((width: number, height: number, screenshotData: string) => {
-    // Set screenshot directly - already cropped by Go backend
-    setScreenshot({ width, height, data: screenshotData });
-
-    // Reset annotations for new capture (clears history)
-    resetAnnotations([]);
-    setSelectedAnnotationId(null);
-    setActiveTool('select');
-    // Clear last saved path since this is a new capture
-    setLastSavedPath(null);
+    replaceEditorImage({ width, height, data: screenshotData });
     // Show capture success notification
     setStatusMessage(t('status.region.captured'));
     setTimeout(() => setStatusMessage(undefined), 2000);
@@ -511,26 +504,12 @@ function App() {
 
     // Trigger auto-copy of styled canvas (handled by useEffect)
     setPendingAutoCopy(true);
-  }, [resetAnnotations, t]);
+  }, [replaceEditorImage, t]);
 
   const handleClear = useCallback(() => {
-    setScreenshot(null);
-    resetAnnotations([]);
-    setSelectedAnnotationId(null);
+    replaceEditorImage(null);
     setStatusMessage(undefined);
-    // Clear last saved path
-    setLastSavedPath(null);
-    // Reset crop state
-    setCropState({
-      originalImage: null,
-      croppedImage: null,
-      originalAnnotations: [],
-      lastCropArea: null,
-      isCropApplied: false,
-    });
-    setCropArea(null);
-    setCropMode(false);
-  }, [resetAnnotations, t]);
+  }, [replaceEditorImage]);
 
   const handleImportImage = useCallback(async () => {
     setStatusMessage(t('status.import.open'));
@@ -544,20 +523,7 @@ function App() {
         return;
       }
 
-      setScreenshot(result as CaptureResult);
-      // Reset annotations and crop state for imported image (clears history)
-      resetAnnotations([]);
-      setSelectedAnnotationId(null);
-      setActiveTool('select');
-      setCropState({
-        originalImage: null,
-        croppedImage: null,
-        originalAnnotations: [],
-        lastCropArea: null,
-        isCropApplied: false,
-      });
-      setCropArea(null);
-      setCropMode(false);
+      replaceEditorImage(result);
       setStatusMessage(t('status.import.done'));
       setTimeout(() => setStatusMessage(undefined), 2000);
     } catch (error) {
@@ -565,7 +531,7 @@ function App() {
       setStatusMessage('Failed to import image');
       setTimeout(() => setStatusMessage(undefined), 3000);
     }
-  }, [resetAnnotations, t]);
+  }, [replaceEditorImage, t]);
 
   const handleClipboardCapture = useCallback(async () => {
     try {
@@ -577,20 +543,7 @@ function App() {
         return;
       }
 
-      setScreenshot(result as CaptureResult);
-      // Reset annotations and crop state for clipboard image (clears history)
-      resetAnnotations([]);
-      setSelectedAnnotationId(null);
-      setActiveTool('select');
-      setCropState({
-        originalImage: null,
-        croppedImage: null,
-        originalAnnotations: [],
-        lastCropArea: null,
-        isCropApplied: false,
-      });
-      setCropArea(null);
-      setCropMode(false);
+      replaceEditorImage(result);
       setStatusMessage(t('status.clipboard.pasted'));
       setTimeout(() => setStatusMessage(undefined), 2000);
     } catch (error) {
@@ -598,7 +551,7 @@ function App() {
       setStatusMessage(t('status.clipboard.none'));
       setTimeout(() => setStatusMessage(undefined), 3000);
     }
-  }, [resetAnnotations, t]);
+  }, [replaceEditorImage, t]);
 
   // Drag & drop state
   const [isDragging, setIsDragging] = useState(false);
@@ -632,19 +585,7 @@ function App() {
           height: img.height,
           data: base64Data,
         };
-        setScreenshot(result);
-        resetAnnotations([]);
-        setSelectedAnnotationId(null);
-        setActiveTool('select');
-        setCropState({
-          originalImage: null,
-          croppedImage: null,
-          originalAnnotations: [],
-          lastCropArea: null,
-          isCropApplied: false,
-        });
-        setCropArea(null);
-        setCropMode(false);
+        replaceEditorImage(result);
         setStatusMessage(t('status.imported', { name: file.name }));
         setTimeout(() => setStatusMessage(undefined), 2000);
       };
@@ -659,7 +600,7 @@ function App() {
       setTimeout(() => setStatusMessage(undefined), 3000);
     };
     reader.readAsDataURL(file);
-  }, [resetAnnotations, t]);
+  }, [replaceEditorImage, t]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -754,23 +695,7 @@ function App() {
     try {
       const result = await OpenInEditor(image.filepath);
       if (result) {
-        // Clear previous editor state
-        setScreenshot(result as CaptureResult);
-        resetAnnotations([]);
-        setSelectedAnnotationId(null);
-        setActiveTool('select');
-        // Reset crop state for new image
-        setCropState({
-          originalImage: null,
-          croppedImage: null,
-          originalAnnotations: [],
-          lastCropArea: null,
-          isCropApplied: false,
-        });
-        setCropArea(null);
-        setCropMode(false);
-        // Track source path for "Save" functionality
-        setLastSavedPath(image.filepath);
+        replaceEditorImage(result, image.filepath);
         setStatusMessage(t('status.opened.library'));
         setTimeout(() => setStatusMessage(undefined), 2000);
       }
@@ -779,7 +704,7 @@ function App() {
       setStatusMessage(t('status.open.failed'));
       setTimeout(() => setStatusMessage(undefined), 3000);
     }
-  }, [resetAnnotations, t]);
+  }, [replaceEditorImage, t]);
 
   const handleLibraryCapture = useCallback(() => {
     setShowLibrary(false);
@@ -1060,13 +985,7 @@ function App() {
       // Reset annotations to original (clears undo history since canvas context changed)
       resetAnnotations(cropState.originalAnnotations);
     }
-    setCropState({
-      originalImage: null,
-      croppedImage: null,
-      originalAnnotations: [],
-      lastCropArea: null,
-      isCropApplied: false,
-    });
+    setCropState(EMPTY_CROP_STATE);
     setCropArea(null);
     setCropMode(false);
     setActiveTool('select');
