@@ -16,23 +16,50 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
   const t = useT();
   const [images, setImages] = useState<LibraryImage[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const loadSequence = useRef(0);
+  const pendingDelete = useRef<Promise<void> | null>(null);
 
   // Derived state for selected image
-  const selectedImage = selectedIndex >= 0 && selectedIndex < images.length
-    ? images[selectedIndex]
-    : null;
+  const selectedImage = isLoading ? null : images[selectedIndex] ?? null;
+
+  const loadImages = useCallback(async () => {
+    const request = ++loadSequence.current;
+    setIsLoading(true);
+    try {
+      await pendingDelete.current?.catch(() => undefined);
+      if (request !== loadSequence.current) return;
+      const list = await GetLibraryImages();
+      if (request === loadSequence.current) {
+        setImages(list ?? []);
+      }
+    } catch (error) {
+      if (request === loadSequence.current) {
+        console.error('Failed to load library images:', error);
+        setImages([]);
+      }
+    } finally {
+      if (request === loadSequence.current) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
 
   // Load images when modal opens
   useEffect(() => {
-    if (isOpen) {
-      loadImages();
-      // Focus container for keyboard events
-      setTimeout(() => containerRef.current?.focus(), 100);
+    if (!isOpen) {
+      setIsLoading(true);
+      return;
     }
-  }, [isOpen]);
+    void loadImages();
+    const focusTimer = window.setTimeout(() => containerRef.current?.focus(), 100);
+    return () => {
+      loadSequence.current++;
+      window.clearTimeout(focusTimer);
+    };
+  }, [isOpen, loadImages]);
 
   // Reset selection when images change
   useEffect(() => {
@@ -43,11 +70,32 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
     }
   }, [images]);
 
+  const handleDelete = useCallback(async () => {
+    if (!selectedImage || pendingDelete.current || !window.confirm(t('library.delete.confirm'))) {
+      return;
+    }
+
+    const path = selectedImage.filepath;
+    setIsDeleting(true);
+    try {
+      const deletion = DeleteScreenshot(path);
+      pendingDelete.current = deletion;
+      await deletion;
+      setImages(prev => prev.filter(image => image.filepath !== path));
+    } catch (error) {
+      console.error('Failed to delete screenshot:', error);
+    } finally {
+      pendingDelete.current = null;
+      setIsDeleting(false);
+    }
+  }, [selectedImage, t]);
+
   // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isLoading && e.key !== 'Escape') return;
       const cols = 4; // Grid columns
 
       switch (e.key) {
@@ -105,7 +153,7 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, images, selectedImage, onEdit, onClose]);
+  }, [isOpen, isLoading, images.length, selectedImage, onEdit, onClose, handleDelete]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -115,18 +163,6 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
     }
   }, [selectedIndex]);
 
-  const loadImages = async () => {
-    setIsLoading(true);
-    try {
-      const list = await GetLibraryImages();
-      setImages((list as LibraryImage[]) || []);
-    } catch (error) {
-      console.error('Failed to load library images:', error);
-      setImages([]);
-    }
-    setIsLoading(false);
-  };
-
   const handleSelect = useCallback((index: number) => {
     setSelectedIndex(index);
   }, []);
@@ -134,29 +170,6 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
   const handleDoubleClick = useCallback((image: LibraryImage) => {
     onEdit(image);
   }, [onEdit]);
-
-  const handleDelete = async () => {
-    if (!selectedImage) return;
-
-    const confirmed = window.confirm(t('library.delete.confirm'));
-    if (!confirmed) return;
-
-    setIsDeleting(true);
-    try {
-      await DeleteScreenshot(selectedImage.filepath);
-      setImages(prev => {
-        const newImages = prev.filter(img => img.filepath !== selectedImage.filepath);
-        // Adjust selection index
-        if (selectedIndex >= newImages.length) {
-          setSelectedIndex(Math.max(newImages.length - 1, 0));
-        }
-        return newImages;
-      });
-    } catch (error) {
-      console.error('Failed to delete screenshot:', error);
-    }
-    setIsDeleting(false);
-  };
 
   const handleEdit = () => {
     if (selectedImage) {
@@ -188,9 +201,11 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
           <div className="flex items-center gap-3">
             <Image className="w-5 h-5 text-violet-400" />
             <h2 className="text-lg font-bold text-gradient">{t('library.title')}</h2>
-            <span className="text-sm text-slate-400">
-              {t('library.count', { n: images.length })}
-            </span>
+            {!isLoading && (
+              <span className="text-sm text-slate-400">
+                {t('library.count', { n: images.length })}
+              </span>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -285,7 +300,7 @@ export function LibraryWindow({ isOpen, onClose, onCapture, onEdit }: LibraryWin
             <Tooltip text={t('tip.library.refresh')}>
               <button
                 onClick={loadImages}
-                disabled={isLoading}
+                disabled={isLoading || isDeleting}
                 className="px-3 py-2 text-slate-400 hover:text-violet-400 transition-all duration-200
                            text-sm flex items-center gap-2 rounded-lg hover:bg-white/5 disabled:opacity-50"
               >
