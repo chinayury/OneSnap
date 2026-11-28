@@ -74,14 +74,10 @@ export type EditorTool = 'select' | 'crop' | AnnotationType;
 export interface CropState {
   // Original image data (always preserved for re-crop)
   originalImage: CaptureResult | null;
-  // Cropped image result (displayed when crop is applied)
-  croppedImage: CaptureResult | null;
   // Original annotations before crop (for restore)
   originalAnnotations: Annotation[];
   // Last applied crop area (for showing previous selection on re-crop)
   lastCropArea: CropArea | null;
-  // Whether crop is currently applied (showing cropped view)
-  isCropApplied: boolean;
 }
 
 // Output canvas ratio - determines the final export dimensions

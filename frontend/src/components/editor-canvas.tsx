@@ -896,16 +896,18 @@ export function EditorCanvas({
             </Group>
 
             {/* Annotations */}
-            <AnnotationShapes
-              annotations={tempAnnotation ? [...annotations, tempAnnotation] : annotations}
-              selectedId={selectedAnnotationId}
-              onSelect={onAnnotationSelect}
-              onUpdate={onAnnotationUpdate}
-              scale={scale}
-              effectImages={effectCanvases}
-              canvasWidth={innerWidth}
-              canvasHeight={innerHeight}
-            />
+            <Group listening={!cropMode}>
+              <AnnotationShapes
+                annotations={tempAnnotation ? [...annotations, tempAnnotation] : annotations}
+                selectedId={selectedAnnotationId}
+                onSelect={onAnnotationSelect}
+                onUpdate={onAnnotationUpdate}
+                scale={scale}
+                effectImages={effectCanvases}
+                canvasWidth={innerWidth}
+                canvasHeight={innerHeight}
+              />
+            </Group>
 
             {/* Spotlight overlays - dim areas outside spotlight regions */}
             <SpotlightOverlay

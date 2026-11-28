@@ -57,10 +57,8 @@ const DEFAULT_EDITOR_SETTINGS = {
 
 const EMPTY_CROP_STATE: CropState = {
   originalImage: null,
-  croppedImage: null,
   originalAnnotations: [],
   lastCropArea: null,
-  isCropApplied: false,
 };
 
 // Helper to parse ratio string into numeric ratio
@@ -139,7 +137,7 @@ function constrainToAspectRatio(area: CropArea, ratio: CropAspectRatio): CropAre
 
 function App() {
   const stageRef = useRef<Konva.Stage>(null);
-  const [screenshot, setScreenshot] = useState<CaptureResult | null>(null);
+  const [currentScreenshot, setScreenshot] = useState<CaptureResult | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [showWindowPicker, setShowWindowPicker] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
@@ -217,6 +215,9 @@ function App() {
   const [cropAspectRatio, setCropAspectRatio] = useState<CropAspectRatio>('free');
   const [isDrawingCrop, setIsDrawingCrop] = useState(false);
   const [cropState, setCropState] = useState<CropState>(EMPTY_CROP_STATE);
+  const cropPreview = cropMode ? cropState.originalImage : null;
+  const screenshot = cropPreview ?? currentScreenshot;
+  const canvasAnnotations = cropPreview ? cropState.originalAnnotations : annotations;
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -820,20 +821,11 @@ function App() {
 
   // Crop handlers - snapshot-based workflow
   const handleCropToolSelect = useCallback(() => {
+    if (cropMode) return;
     setActiveTool('crop');
     setCropMode(true);
-
-    // If crop was previously applied, restore original for editing
-    if (cropState.isCropApplied && cropState.originalImage) {
-      // Restore original image and annotations for editing
-      setScreenshot(cropState.originalImage);
-      setAnnotations(cropState.originalAnnotations);
-      // Show previous crop area as starting point
-      if (cropState.lastCropArea) {
-        setCropArea(cropState.lastCropArea);
-      }
-    }
-  }, [cropState]);
+    setCropArea(cropState.lastCropArea);
+  }, [cropMode, cropState.lastCropArea]);
 
   const handleCropChange = useCallback((area: CropArea) => {
     setCropArea(area);
@@ -848,9 +840,6 @@ function App() {
 
     // Save original state if not already saved
     const originalImage = cropState.originalImage || screenshot;
-    const originalAnnotations = cropState.originalAnnotations.length > 0
-      ? cropState.originalAnnotations
-      : [...annotations];
 
     // Save current stage properties
     const oldScaleX = stage.scaleX();
@@ -913,7 +902,7 @@ function App() {
     };
 
     // Adjust annotations: reposition relative to crop origin and filter out-of-bounds
-    const adjustedAnnotations = annotations
+    const adjustedAnnotations = canvasAnnotations
       .map(ann => ({
         ...ann,
         x: ann.x - cropArea.x,
@@ -931,10 +920,8 @@ function App() {
     // Update crop state
     setCropState({
       originalImage,
-      croppedImage,
-      originalAnnotations,
+      originalAnnotations: canvasAnnotations,
       lastCropArea: cropArea,
-      isCropApplied: true,
     });
 
     // Set cropped image as current screenshot
@@ -946,34 +933,14 @@ function App() {
     setCropMode(false);
     setCropArea(null);
     setActiveTool('select');
-  }, [cropArea, screenshot, annotations, cropState, stageRef, resetAnnotations]);
+  }, [cropArea, screenshot, canvasAnnotations, cropState.originalImage, resetAnnotations]);
 
   const handleCropCancel = useCallback(() => {
-    // If crop was applied, restore the cropped view
-    if (cropState.isCropApplied && cropState.croppedImage) {
-      setScreenshot(cropState.croppedImage);
-      // Recalculate annotations for cropped view
-      const lastCrop = cropState.lastCropArea;
-      if (lastCrop) {
-        const adjustedAnnotations = cropState.originalAnnotations
-          .map(ann => ({
-            ...ann,
-            x: ann.x - lastCrop.x,
-            y: ann.y - lastCrop.y,
-          }))
-          .filter(ann => {
-            const annRight = ann.x + ann.width;
-            const annBottom = ann.y + ann.height;
-            return annRight > 0 && ann.x < lastCrop.width && annBottom > 0 && ann.y < lastCrop.height;
-          });
-        setAnnotations(adjustedAnnotations);
-      }
-    }
     setCropMode(false);
     setCropArea(null);
     setIsDrawingCrop(false);
     setActiveTool('select');
-  }, [cropState]);
+  }, []);
 
   const handleCropAspectRatioChange = useCallback((ratio: CropAspectRatio) => {
     setCropAspectRatio(ratio);
@@ -1002,15 +969,12 @@ function App() {
     if (tool === 'crop') {
       handleCropToolSelect();
     } else {
-      setActiveTool(tool);
-      // Exit crop mode if switching to another tool
       if (cropMode) {
-        setCropMode(false);
-        setCropArea(null);
-        setIsDrawingCrop(false);
+        handleCropCancel();
       }
+      setActiveTool(tool);
     }
-  }, [cropMode, handleCropToolSelect]);
+  }, [cropMode, handleCropToolSelect, handleCropCancel]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1023,7 +987,7 @@ function App() {
       }
 
       // Undo/Redo shortcuts (Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y)
-      if (e.ctrlKey && !e.altKey && !e.metaKey) {
+      if (!cropMode && e.ctrlKey && !e.altKey && !e.metaKey) {
         if (e.key === 'z' || e.key === 'Z') {
           e.preventDefault();
           if (e.shiftKey) {
@@ -1041,7 +1005,7 @@ function App() {
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedAnnotationId) {
+        if (!cropMode && selectedAnnotationId) {
           handleDeleteSelected();
         }
       } else if (e.key === 'Escape') {
@@ -1490,7 +1454,7 @@ function App() {
             onCancel={handleCropCancel}
             onReset={handleCropReset}
             canApply={!!cropArea && cropArea.width >= 20 && cropArea.height >= 20}
-            canReset={cropState.isCropApplied}
+            canReset={cropState.originalImage !== null}
           />
         </div>
       )}
@@ -1513,8 +1477,8 @@ function App() {
           borderType={borderType}
           stageRef={stageRef}
           activeTool={activeTool}
-          annotations={annotations}
-          selectedAnnotationId={selectedAnnotationId}
+          annotations={canvasAnnotations}
+          selectedAnnotationId={cropMode ? null : selectedAnnotationId}
           strokeColor={strokeColor}
           fillColor={fillColor}
           strokeWidth={strokeWidth}

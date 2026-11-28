@@ -41,7 +41,7 @@ GDI 会破坏 32bpp DIB 的 alpha 通道，所以先把字形渲染到独立小 
 - 形状渲染在 `annotation-shapes.tsx`，选区/缩放用 Konva Transformer；
 - **马赛克/模糊**：对整张截图预生成像素化/模糊画布（display 尺寸坐标），
   标注形状以 `clipFunc` 裁剪显示，拖动时实时同步保证像素对位；
-- 裁剪是快照式：保留原图与标注，可反复重裁、还原；
+- 裁剪保留原图与标注快照，可重新选择裁剪范围。预览和已确认的编辑状态各自独立。取消或切换工具时，保留已应用的裁剪、标注和撤销记录。预览期间暂停标注的选择、拖动和撤销重做。 [ShareX 裁剪说明](https://getsharex.com/docs/image-editor) · [ksnip 发布记录](https://github.com/ksnip/ksnip/blob/master/CHANGELOG.md)
 - 导出走 `stage.toDataURL/toCanvas`（隐藏 Transformer，1:1 像素比）。
 
 从资源管理器粘贴文件列表时，OneSnap 按列表顺序打开第一张可读取的图片。遇到缺失或无法解码的文件会继续查找。ksnip 也支持粘贴图片路径。 [ksnip 发布记录](https://github.com/ksnip/ksnip/blob/master/CHANGELOG.md#release-170)
