@@ -44,6 +44,8 @@ GDI 会破坏 32bpp DIB 的 alpha 通道，所以先把字形渲染到独立小 
 - 裁剪是快照式：保留原图与标注，可反复重裁、还原；
 - 导出走 `stage.toDataURL/toCanvas`（隐藏 Transformer，1:1 像素比）。
 
+从资源管理器粘贴文件列表时，OneSnap 按列表顺序打开第一张可读取的图片。遇到缺失或无法解码的文件会继续查找。ksnip 也支持粘贴图片路径。 [ksnip 发布记录](https://github.com/ksnip/ksnip/blob/master/CHANGELOG.md#release-170)
+
 ## 配置与存储
 
 - 读取 `%APPDATA%\OneSnap\config.json` 时，先初始化默认值，再应用文件中已有的字段。旧配置缺少字段时会沿用当前默认值，显式关闭的选项和零值仍会保留。设置弹窗管理热键、启动、快存、导出和更新检查。 [ShareX 配置定义](https://github.com/ShareX/ShareX/blob/develop/ShareX/ApplicationConfig.cs)

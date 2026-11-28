@@ -69,7 +69,8 @@ func readImageFromHDROP(hDrop uintptr) (*CaptureResult, error) {
 		return nil, errors.New("no files in clipboard")
 	}
 
-	// Try each file until we find an image
+	var firstImageError error
+	// Try each file until we can read an image.
 	for i := uintptr(0); i < count; i++ {
 		// Get required buffer size for filename
 		size, _, _ := procDragQueryFile.Call(hDrop, i, 0, 0)
@@ -93,10 +94,18 @@ func readImageFromHDROP(hDrop uintptr) (*CaptureResult, error) {
 			continue
 		}
 
-		// Read and decode the image file
-		return readImageFile(filePath)
+		result, err := readImageFile(filePath)
+		if err == nil {
+			return result, nil
+		}
+		if firstImageError == nil {
+			firstImageError = err
+		}
 	}
 
+	if firstImageError != nil {
+		return nil, firstImageError
+	}
 	return nil, errors.New("no image files in clipboard")
 }
 
