@@ -234,6 +234,8 @@ function App() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<updater.UpdateInfo | null>(null);
 
+  const editorShortcutsEnabled = !(showLibrary || showSettings || showWindowPicker || showUpdateModal);
+
   // Load editor settings from Go config on startup
   useEffect(() => {
     const loadEditorSettings = async () => {
@@ -1010,6 +1012,8 @@ function App() {
 
   // Keyboard shortcuts
   useEffect(() => {
+    if (!editorShortcutsEnabled) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Skip if typing in an input field
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -1089,7 +1093,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedAnnotationId, handleDeleteSelected, handleToolChange, cropMode, handleCropCancel, handleCropToolSelect, undoAnnotations, redoAnnotations]);
+  }, [editorShortcutsEnabled, selectedAnnotationId, handleDeleteSelected, handleToolChange, cropMode, handleCropCancel, handleCropToolSelect, undoAnnotations, redoAnnotations]);
 
   // Export helpers - simplified since cropped image is now the current screenshot
   const getCanvasDataUrl = useCallback((format: 'png' | 'jpeg'): string | null => {
@@ -1374,20 +1378,22 @@ function App() {
 
   // Keyboard shortcuts for export, import, and clipboard paste
   useEffect(() => {
+    if (!editorShortcutsEnabled) return;
+
     const handleExportKeyDown = (e: KeyboardEvent) => {
       // Skip if typing in an input field
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 
-      // Ctrl+O for import (works anytime)
+      // Ctrl+O for import
       if (e.ctrlKey && e.key === 'o') {
         e.preventDefault();
         handleImportImage();
         return;
       }
 
-      // Ctrl+V for clipboard paste (works anytime, replaces current image per validation)
+      // Ctrl+V replaces the current image with the clipboard image
       if (e.ctrlKey && e.key === 'v') {
         e.preventDefault();
         handleClipboardCapture();
@@ -1410,7 +1416,7 @@ function App() {
 
     window.addEventListener('keydown', handleExportKeyDown);
     return () => window.removeEventListener('keydown', handleExportKeyDown);
-  }, [screenshot, handleSave, handleQuickSave, handleCopyToClipboard, handleImportImage, handleClipboardCapture]);
+  }, [editorShortcutsEnabled, screenshot, handleSave, handleQuickSave, handleCopyToClipboard, handleImportImage, handleClipboardCapture]);
 
   return (
     <LangContext.Provider value={lang}>
@@ -1488,6 +1494,7 @@ function App() {
 
       <div className="flex flex-1 overflow-hidden">
         <EditorCanvas
+          shortcutsEnabled={editorShortcutsEnabled}
           screenshot={screenshot}
           padding={padding}
           cornerRadius={cornerRadius}

@@ -10,6 +10,7 @@ import { ImageIcon } from 'lucide-react';
 import { useT } from '../i18n';
 
 interface EditorCanvasProps {
+  shortcutsEnabled: boolean;
   screenshot: CaptureResult | null;
   padding: number;
   cornerRadius: number;
@@ -241,6 +242,7 @@ function useEffectCanvases(
 }
 
 export function EditorCanvas({
+  shortcutsEnabled,
   screenshot,
   padding,
   cornerRadius,
@@ -336,6 +338,8 @@ export function EditorCanvas({
   // Handle keyboard events for pan (space) and zoom shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!shortcutsEnabled) return;
+
       // Skip if typing in input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
@@ -375,7 +379,7 @@ export function EditorCanvas({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [spacePressed]);
+  }, [shortcutsEnabled, spacePressed]);
 
   // Handle mouse wheel zoom
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
