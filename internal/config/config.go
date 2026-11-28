@@ -191,5 +191,24 @@ func (c *Config) Save() error {
 		return err
 	}
 
-	return os.WriteFile(configPath, data, 0644)
+	// Write and flush a complete replacement before changing the live file.
+	temp, err := os.CreateTemp(dir, ".config-*.tmp")
+	if err != nil {
+		return err
+	}
+	tempPath := temp.Name()
+	defer os.Remove(tempPath)
+
+	if _, err = temp.Write(data); err == nil {
+		err = temp.Sync()
+	}
+	closeErr := temp.Close()
+	if err != nil {
+		return err
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+
+	return os.Rename(tempPath, configPath)
 }
