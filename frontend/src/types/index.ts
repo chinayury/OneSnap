@@ -108,8 +108,10 @@ export interface QuickSaveConfig {
   pattern: 'timestamp' | 'date' | 'increment';
 }
 
+export type ExportFormat = 'png' | 'jpeg';
+
 export interface ExportConfig {
-  defaultFormat: 'png' | 'jpeg';
+  defaultFormat: ExportFormat;
   jpegQuality: number;
   includeBackground: boolean;
 }

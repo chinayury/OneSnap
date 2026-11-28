@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import type { ExportFormat } from '../types';
 import { ClipboardCopy, Download, Save, Link, Image } from 'lucide-react';
 import { Tooltip } from './tooltip';
 import { useT } from '../i18n';
 
 interface ExportToolbarProps {
-  onSave: (format: 'png' | 'jpeg') => void;
-  onQuickSave: (format: 'png' | 'jpeg') => void;
+  format: ExportFormat;
+  onFormatChange: (format: ExportFormat) => void;
+  onSave: () => void;
+  onQuickSave: () => void;
   onCopyToClipboard: () => void;
   onCopyPath: () => void;
   onOpenLibrary: () => void;
@@ -14,6 +16,8 @@ interface ExportToolbarProps {
 }
 
 export function ExportToolbar({
+  format,
+  onFormatChange,
   onSave,
   onQuickSave,
   onCopyToClipboard,
@@ -23,7 +27,6 @@ export function ExportToolbar({
   isExporting,
 }: ExportToolbarProps) {
   const t = useT();
-  const [format, setFormat] = useState<'png' | 'jpeg'>('png');
 
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 glass">
@@ -32,7 +35,7 @@ export function ExportToolbar({
         <span className="text-xs text-slate-400 font-medium">{t('export.format')}</span>
         <div className="flex gap-1">
           <button
-            onClick={() => setFormat('png')}
+            onClick={() => onFormatChange('png')}
             className={`px-3 py-1 text-xs rounded-lg font-medium transition-all duration-200 ${
               format === 'png'
                 ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
@@ -42,7 +45,7 @@ export function ExportToolbar({
             PNG
           </button>
           <button
-            onClick={() => setFormat('jpeg')}
+            onClick={() => onFormatChange('jpeg')}
             className={`px-3 py-1 text-xs rounded-lg font-medium transition-all duration-200 ${
               format === 'jpeg'
                 ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30'
@@ -91,7 +94,7 @@ export function ExportToolbar({
         {/* Quick Save */}
         <Tooltip text={t('tip.quick.save')}>
           <button
-            onClick={() => onQuickSave(format)}
+            onClick={onQuickSave}
             disabled={isExporting}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg font-medium transition-all duration-200
                        bg-gradient-to-r from-cyan-500/20 to-teal-500/20 hover:from-cyan-500/30 hover:to-teal-500/30
@@ -121,7 +124,7 @@ export function ExportToolbar({
         {/* Save As */}
         <Tooltip text={t('tip.save.as')}>
           <button
-            onClick={() => onSave(format)}
+            onClick={onSave}
             disabled={isExporting}
             className="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg font-medium transition-all duration-200
                        bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500

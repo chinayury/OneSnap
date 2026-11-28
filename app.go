@@ -710,14 +710,16 @@ func (a *App) SaveConfig(cfg *config.Config) error {
 	a.config.Hotkeys = cfg.Hotkeys
 	a.config.Startup = cfg.Startup
 	a.config.QuickSave = cfg.QuickSave
-	a.config.Export = cfg.Export
 	a.config.Update.CheckOnStartup = cfg.Update.CheckOnStartup
 	// a.config.Update.SkippedVersion intentionally preserved
 
-	// Save to disk
-	if err := a.config.Save(); err != nil {
+	// Reopening settings after a failed write must show the last saved export preferences.
+	pending := *a.config
+	pending.Export = cfg.Export
+	if err := pending.Save(); err != nil {
 		return err
 	}
+	a.config.Export = pending.Export
 
 	// Re-register hotkeys if they changed
 	if hotkeysChanged {

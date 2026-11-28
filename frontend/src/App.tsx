@@ -13,7 +13,7 @@ import { StatusBar } from './components/status-bar';
 import { AnnotationToolbar } from './components/annotation-toolbar';
 import { ExportToolbar } from './components/export-toolbar';
 import { CropToolbar } from './components/crop-toolbar';
-import { CaptureResult, CaptureMode, WindowInfo, Annotation, EditorTool, OutputRatio, CropArea, CropAspectRatio, CropState, BorderType, LibraryImage } from './types';
+import { CaptureResult, CaptureMode, WindowInfo, Annotation, EditorTool, OutputRatio, CropArea, CropAspectRatio, CropState, BorderType, LibraryImage, ExportFormat } from './types';
 import {
   CaptureFullscreen,
   CaptureWindow,
@@ -222,7 +222,8 @@ function App() {
   const [isExporting, setIsExporting] = useState(false);
   const [lastSavedPath, setLastSavedPath] = useState<string | null>(null);
   const editorImageGeneration = useRef(0);
-  const [jpegQuality, setJpegQuality] = useState(95);
+  const [exportFormat = 'png', setExportFormat] = useState<ExportFormat>();
+  const [jpegQuality = 95, setJpegQuality] = useState<number>();
 
   // Auto-copy state: tracks when a fresh capture needs auto-copy after canvas renders
   const [pendingAutoCopy, setPendingAutoCopy] = useState(false);
@@ -295,9 +296,10 @@ function App() {
     const loadExportSettings = async () => {
       try {
         const cfg = await GetConfig();
-        if (cfg.export?.jpegQuality) {
-          setJpegQuality(cfg.export.jpegQuality);
-        }
+        // A choice made while the config was loading takes precedence.
+        const defaultFormat = cfg.export?.defaultFormat === 'jpeg' ? 'jpeg' : 'png';
+        setExportFormat(current => current ?? defaultFormat);
+        setJpegQuality(current => current ?? (cfg.export?.jpegQuality || 95));
         if (isLang(cfg.language)) {
           setLangState(cfg.language);
         }
@@ -1096,7 +1098,7 @@ function App() {
   }, [editorShortcutsEnabled, selectedAnnotationId, handleDeleteSelected, handleToolChange, cropMode, handleCropCancel, handleCropToolSelect, undoAnnotations, redoAnnotations]);
 
   // Export helpers - simplified since cropped image is now the current screenshot
-  const getCanvasDataUrl = useCallback((format: 'png' | 'jpeg'): string | null => {
+  const getCanvasDataUrl = useCallback((format: ExportFormat): string | null => {
     const stage = stageRef.current;
     if (!stage || !screenshot) return null;
 
@@ -1156,9 +1158,9 @@ function App() {
   };
 
   // Export handlers
-  const handleSave = useCallback(async (format: 'png' | 'jpeg') => {
+  const handleSave = useCallback(async () => {
     const imageGeneration = editorImageGeneration.current;
-    const dataUrl = getCanvasDataUrl(format);
+    const dataUrl = getCanvasDataUrl(exportFormat);
     if (!dataUrl) {
       setStatusMessage(t('status.export.no.canvas'));
       return;
@@ -1169,7 +1171,7 @@ function App() {
 
     try {
       const base64Data = getBase64FromDataUrl(dataUrl);
-      const result = await SaveImage(base64Data, format);
+      const result = await SaveImage(base64Data, exportFormat);
 
       if (result.success) {
         if (imageGeneration === editorImageGeneration.current) {
@@ -1186,11 +1188,11 @@ function App() {
 
     setIsExporting(false);
     setTimeout(() => setStatusMessage(undefined), 3000);
-  }, [getCanvasDataUrl, t]);
+  }, [exportFormat, getCanvasDataUrl, t]);
 
-  const handleQuickSave = useCallback(async (format: 'png' | 'jpeg') => {
+  const handleQuickSave = useCallback(async () => {
     const imageGeneration = editorImageGeneration.current;
-    const dataUrl = getCanvasDataUrl(format);
+    const dataUrl = getCanvasDataUrl(exportFormat);
     if (!dataUrl) {
       setStatusMessage(t('status.export.no.canvas'));
       return;
@@ -1201,7 +1203,7 @@ function App() {
 
     try {
       const base64Data = getBase64FromDataUrl(dataUrl);
-      const result = await QuickSave(base64Data, format);
+      const result = await QuickSave(base64Data, exportFormat);
 
       if (result.success) {
         if (imageGeneration === editorImageGeneration.current) {
@@ -1225,7 +1227,7 @@ function App() {
 
     setIsExporting(false);
     setTimeout(() => setStatusMessage(undefined), 3000);
-  }, [getCanvasDataUrl, t]);
+  }, [exportFormat, getCanvasDataUrl, t]);
 
   // Copy file path to clipboard
   const handleCopyPath = useCallback(async () => {
@@ -1402,12 +1404,13 @@ function App() {
 
       if (!screenshot) return;
 
-      if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+      if (e.ctrlKey && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        handleSave('png');
-      } else if (e.ctrlKey && e.key === 's') {
-        e.preventDefault();
-        handleQuickSave('png');
+        if (e.shiftKey) {
+          handleSave();
+        } else {
+          handleQuickSave();
+        }
       } else if (e.ctrlKey && e.key === 'c') {
         e.preventDefault();
         handleCopyToClipboard();
@@ -1572,6 +1575,8 @@ function App() {
 
       {screenshot && (
         <ExportToolbar
+          format={exportFormat}
+          onFormatChange={setExportFormat}
           onSave={handleSave}
           onQuickSave={handleQuickSave}
           onCopyToClipboard={handleCopyToClipboard}
@@ -1602,6 +1607,8 @@ function App() {
         onClose={() => setShowSettings(false)}
         lang={lang}
         onLanguageChange={setLang}
+        onDefaultFormatSaved={setExportFormat}
+        onJpegQualitySaved={setJpegQuality}
       />
 
       <UpdateModal

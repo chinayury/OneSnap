@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ExportFormat } from '../types';
 import { HotkeyInput } from './hotkey-input';
 import {
   GetConfig,
@@ -16,6 +17,8 @@ interface SettingsModalProps {
   lang: Lang;
   /** Called immediately when the user switches language in the General tab */
   onLanguageChange: (lang: Lang) => void;
+  onDefaultFormatSaved: (format: ExportFormat) => void;
+  onJpegQualitySaved: (quality: number) => void;
 }
 
 type SettingsTab = 'general' | 'hotkeys' | 'startup' | 'quicksave' | 'export' | 'updates';
@@ -39,7 +42,7 @@ interface LocalConfig {
     pattern: string;
   };
   export: {
-    defaultFormat: string;
+    defaultFormat: ExportFormat;
     jpegQuality: number;
     includeBackground: boolean;
     autoCopyToClipboard: boolean;
@@ -77,7 +80,9 @@ const defaultConfig: LocalConfig = {
   },
 };
 
-export function SettingsModal({ isOpen, onClose, lang, onLanguageChange }: SettingsModalProps) {
+export function SettingsModal({
+  isOpen, onClose, lang, onLanguageChange, onDefaultFormatSaved, onJpegQualitySaved,
+}: SettingsModalProps) {
   const t = useT();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [localConfig, setLocalConfig] = useState<LocalConfig>(defaultConfig);
@@ -113,7 +118,7 @@ export function SettingsModal({ isOpen, onClose, lang, onLanguageChange }: Setti
           pattern: cfg.quickSave?.pattern || 'timestamp',
         },
         export: {
-          defaultFormat: cfg.export?.defaultFormat || 'png',
+          defaultFormat: cfg.export?.defaultFormat === 'jpeg' ? 'jpeg' : 'png',
           jpegQuality: cfg.export?.jpegQuality || 95,
           includeBackground: cfg.export?.includeBackground ?? true,
           autoCopyToClipboard: cfg.export?.autoCopyToClipboard ?? true,
@@ -145,6 +150,12 @@ export function SettingsModal({ isOpen, onClose, lang, onLanguageChange }: Setti
         update: new config.UpdateConfig(localConfig.update),
       });
       await SaveConfig(cfg);
+      if (localConfig.export.defaultFormat !== originalConfig.export.defaultFormat) {
+        onDefaultFormatSaved(localConfig.export.defaultFormat);
+      }
+      if (localConfig.export.jpegQuality !== originalConfig.export.jpegQuality) {
+        onJpegQualitySaved(localConfig.export.jpegQuality);
+      }
       setOriginalConfig(localConfig);
       onClose();
     } catch (err) {
