@@ -164,13 +164,13 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	cfg := Default()
+	if err := json.Unmarshal(data, cfg); err != nil {
 		// Invalid JSON, return defaults
 		return Default(), nil
 	}
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 // Save writes config to disk

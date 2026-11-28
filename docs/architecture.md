@@ -46,8 +46,7 @@ GDI 会破坏 32bpp DIB 的 alpha 通道，所以先把字形渲染到独立小 
 
 ## 配置与存储
 
-- 配置文件：`%APPDATA%\OneSnap\config.json`（JSON，写盘前合并，
-  设置弹窗只管理热键/启动/快存/导出/更新检查五组，避免误清其它设置）；
+- 读取 `%APPDATA%\OneSnap\config.json` 时，先初始化默认值，再应用文件中已有的字段。旧配置缺少字段时会沿用当前默认值，显式关闭的选项和零值仍会保留。设置弹窗管理热键、启动、快存、导出和更新检查。 [ShareX 配置定义](https://github.com/ShareX/ShareX/blob/develop/ShareX/ApplicationConfig.cs)
 - 快速保存默认目录：`图片\OneSnap`，命名模式 timestamp/date/increment。手动与热键保存共用独占创建逻辑：时间戳和日期重名时追加数字后缀，递增模式使用下一个可用编号；
 - 开机自启：`HKCU\...\CurrentVersion\Run`，每次启动若启用则同步 exe 路径；
 - 更新检查：GitHub Releases 最新版 semver 比较，可跳过指定版本。
